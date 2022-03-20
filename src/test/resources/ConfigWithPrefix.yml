@@ -1,0 +1,20 @@
+final-field: "{PRFX} final value"
+prefix: "prefix value >>"
+regular-field: "{PRFX} regular value"
+
+# PREPEND comment Line 1
+# PREPEND comment Line 2
+prepend:
+  string-field: "{PRFX} string value"
+
+  field-with-comment-at-same-line: "{PRFX} string value" # FIELD_WITH_COMMENT_AT_SAME_LINE comment
+
+  same-line: # SAME_LINE comment Line 1
+    append:
+      field1: "{PRFX} string value"
+      # FIELD1 APPEND comment
+      # Visible line
+
+      # FIELD2 PREPEND comment
+      # Line 2
+      field2: "{PRFX} string value"
