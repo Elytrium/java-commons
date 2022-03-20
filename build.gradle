@@ -57,7 +57,7 @@ license {
 }
 
 checkstyle {
-    setToolVersion("10.0")
+    setToolVersion("9.3")
     setConfigFile(file("${this.getRootDir()}/config/checkstyle/checkstyle.xml"))
     setConfigProperties("configDirectory": "${this.getRootDir()}/config/checkstyle")
 
