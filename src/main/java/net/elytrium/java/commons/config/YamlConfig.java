@@ -53,28 +53,18 @@ public class YamlConfig {
   private String oldPrefix = "";
   private String currentPrefix = "";
 
-  public void reload(@NonNull File configFile) {
-    this.reload(configFile, null, null);
+  public boolean reload(@NonNull File configFile) {
+    return this.reload(configFile, null);
   }
 
-  public void reload(@NonNull File configFile, @Nullable String prefix) {
-    this.reload(configFile, prefix, null);
-  }
-
-  public void reload(@NonNull File configFile, @Nullable Runnable ifNonExists) {
-    this.reload(configFile, null, ifNonExists);
-  }
-
-  public void reload(@NonNull File configFile, @Nullable String prefix, @Nullable Runnable ifNonExists) {
+  public boolean reload(@NonNull File configFile, @Nullable String prefix) {
     if (this.load(configFile, prefix)) {
       this.save(configFile);
+      return false;
     } else {
-      if (ifNonExists != null) {
-        ifNonExists.run();
-      }
-
       this.save(configFile);
       this.load(configFile, prefix);
+      return true;
     }
   }
 

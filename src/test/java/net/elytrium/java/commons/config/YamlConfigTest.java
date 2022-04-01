@@ -37,7 +37,9 @@ class YamlConfigTest {
     Path configWithPrefixPath = Files.createTempFile("ConfigWithPrefix", ".yml");
     File configWithPrefixFile = this.processTempFile(configWithPrefixPath);
     for (int i = 0; i < 4; ++i) {
-      SettingsWithPrefix.IMP.reload(configWithPrefixFile, SettingsWithPrefix.IMP.PREFIX);
+      if (SettingsWithPrefix.IMP.reload(configWithPrefixFile, SettingsWithPrefix.IMP.PREFIX)) {
+        Assertions.assertEquals(0, i);
+      }
     }
 
     Assertions.assertNotEquals("prefix value >> final value", SettingsWithPrefix.IMP.FINAL_FIELD); // Final fields shouldn't be changed.
@@ -58,7 +60,9 @@ class YamlConfigTest {
     Path configWithoutPrefixPath = Files.createTempFile("ConfigWithoutPrefix", ".yml");
     File configWithoutPrefixFile = this.processTempFile(configWithoutPrefixPath);
     for (int i = 0; i < 4; ++i) {
-      SettingsWithoutPrefix.IMP.reload(configWithoutPrefixFile);
+      if (SettingsWithoutPrefix.IMP.reload(configWithoutPrefixFile)) {
+        Assertions.assertEquals(0, i);
+      }
     }
 
     Assertions.assertEquals("{PRFX} regular value", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
