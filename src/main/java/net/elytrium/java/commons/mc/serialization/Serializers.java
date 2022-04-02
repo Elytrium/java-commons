@@ -17,29 +17,45 @@
 
 package net.elytrium.java.commons.mc.serialization;
 
+import java.lang.reflect.InvocationTargetException;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.ComponentSerializer;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public enum Serializers {
 
-  LEGACY_AMPERSAND(LegacyComponentSerializer.legacyAmpersand()),
-  LEGACY_SECTION(LegacyComponentSerializer.legacyAmpersand()),
-  MINIMESSAGE(MiniMessage.miniMessage()),
-  GSON(GsonComponentSerializer.gson()),
-  GSON_COLOR_DOWNSAMPLING(GsonComponentSerializer.colorDownsamplingGson()),
-  PLAIN(PlainTextComponentSerializer.plainText());
+  LEGACY_AMPERSAND("net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer", "legacyAmpersand"),
+  LEGACY_SECTION("net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer", "legacySection"),
+  MINIMESSAGE("net.kyori.adventure.text.minimessage.MiniMessage", "miniMessage"),
+  GSON("net.kyori.adventure.text.serializer.gson.GsonComponentSerializer", "gson"),
+  GSON_COLOR_DOWNSAMPLING("net.kyori.adventure.text.serializer.gson.GsonComponentSerializer", "colorDownsamplingGson"),
+  PLAIN("net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer", "plainText");
 
+  @Nullable
   private final ComponentSerializer<Component, Component, String> serializer;
 
-  @SuppressWarnings("unchecked")
-  Serializers(ComponentSerializer<Component, ?, String> serializer) {
-    this.serializer = (ComponentSerializer<Component, Component, String>) serializer;
+  Serializers(String className, String methodName) {
+    this.serializer = this.findSerializer(className, methodName);
   }
 
+  /**
+   * Used to prevent NoClassDefFoundError exception.
+   *
+   * @param className  The class name of the serializer holder.
+   * @param methodName The method name that returns the serializer.
+   * @return The {@link ComponentSerializer}, may be null.
+   */
+  @Nullable
+  @SuppressWarnings("unchecked")
+  private ComponentSerializer<Component, Component, String> findSerializer(String className, String methodName) {
+    try {
+      return (ComponentSerializer<Component, Component, String>) Class.forName(className).getDeclaredMethod(methodName).invoke(null);
+    } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+      return null;
+    }
+  }
+
+  @Nullable
   public ComponentSerializer<Component, Component, String> getSerializer() {
     return this.serializer;
   }

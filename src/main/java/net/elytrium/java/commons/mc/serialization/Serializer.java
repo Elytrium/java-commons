@@ -26,12 +26,8 @@ public class Serializer implements ComponentSerializer<Component, Component, Str
 
   private final ComponentSerializer<Component, Component, String> serializer;
 
-  public Serializer() {
-    this(Serializers.LEGACY_AMPERSAND);
-  }
-
-  public Serializer(@NotNull Serializers serializer) {
-    this.serializer = serializer.getSerializer();
+  public Serializer(@NotNull ComponentSerializer<Component, Component, String> serializer) {
+    this.serializer = serializer;
   }
 
   @NotNull

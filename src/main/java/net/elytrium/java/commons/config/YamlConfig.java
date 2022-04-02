@@ -71,11 +71,12 @@ public class YamlConfig {
   public boolean load(@NonNull File configFile, @Nullable String prefix) {
     if (prefix == null) {
       this.enablePrefix = false;
-    }
-    if (this.enablePrefix) {
+    } else {
+      this.enablePrefix = true;
       this.oldPrefix = this.currentPrefix.isEmpty() ? prefix : this.currentPrefix;
       this.currentPrefix = prefix;
     }
+
     if (!configFile.exists()) {
       return false;
     }
