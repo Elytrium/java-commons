@@ -19,21 +19,21 @@ package net.elytrium.java.commons.config;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -44,32 +44,49 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
-// TODO: Backups, customizable placeholders, more docs
+// TODO: Customizable placeholders, more docs
 public class YamlConfig {
 
-  private final Logger logger = LoggerFactory.getLogger(YamlConfig.class);
+  private final Yaml yaml = new Yaml();
+
+  private Logger logger = LoggerFactory.getLogger(YamlConfig.class);
 
   private boolean enablePrefix = true;
   private String oldPrefix = "";
   private String currentPrefix = "";
 
-  public boolean reload(@NonNull File configFile) {
+  public void setLogger(Logger logger) {
+    this.logger = logger;
+  }
+
+  public LoadResult reload(@NonNull File configFile) {
     return this.reload(configFile, null);
   }
 
-  public boolean reload(@NonNull File configFile, @Nullable String prefix) {
-    if (this.load(configFile, prefix)) {
-      this.save(configFile);
-      return false;
-    } else {
-      this.save(configFile);
-      this.load(configFile, prefix);
-      return true;
+  public LoadResult reload(@NonNull File configFile, @Nullable String prefix) {
+    LoadResult result = this.load(configFile, prefix);
+    switch (result) {
+      case SUCCESS: {
+        // TODO: Save only if needed.
+        this.save(configFile);
+        break;
+      }
+      case FAIL:
+      case CONFIG_NOT_EXISTS: {
+        this.save(configFile);
+        this.load(configFile, prefix); // Load again, because it now exists.
+        break;
+      }
+      default: {
+        throw new AssertionError("Invalid Result.");
+      }
     }
+
+    return result;
   }
 
-  public boolean load(@NonNull File configFile, @Nullable String prefix) {
-    if (prefix == null) {
+  public LoadResult load(@NonNull File configFile, @Nullable String prefix) {
+    if (prefix == null || this.isBlank(prefix)) {
       this.enablePrefix = false;
     } else {
       this.enablePrefix = true;
@@ -78,35 +95,55 @@ public class YamlConfig {
     }
 
     if (!configFile.exists()) {
-      return false;
+      return LoadResult.CONFIG_NOT_EXISTS;
     }
 
-    try {
-      this.set(new Yaml().load(new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)), "");
-    } catch (IOException e) {
-      this.logger.warn("Unable to load config.", e);
-      return false;
+    Path configPath = configFile.toPath();
+    String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME).replace("T", "_").replace(":", ".");
+    now = now.substring(0, now.lastIndexOf("."));
+    try (InputStream fileInputStream = Files.newInputStream(configPath)) {
+      this.processMap(this.yaml.load(fileInputStream), "", configFile, now);
+    } catch (Throwable t) {
+      try {
+        File configFileCopy = new File(configFile.getParent(), configFile.getName() + "_invalid_" + now);
+        Files.copy(configPath, configFileCopy.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+        this.logger.warn("Unable to load config. File was copied to {}", configFileCopy.getName(), t);
+      } catch (Exception e) {
+        this.logger.warn("Unable to load config and to make a copy.", e);
+      }
+
+      return LoadResult.FAIL;
     }
 
-    return true;
+    return LoadResult.SUCCESS;
   }
 
-  private void set(Map<String, Object> input, String oldPath) {
+  private void processMap(Map<String, Object> input, String oldPath, File configFile, String now) {
     for (Map.Entry<String, Object> entry : input.entrySet()) {
-      String key = oldPath + (oldPath.isEmpty() ? "" : ".") + entry.getKey();
+      String key = oldPath + (oldPath.isEmpty() ? oldPath : ".") + entry.getKey();
       Object value = entry.getValue();
 
       if (value instanceof String) {
         String stringValue = ((String) value).replace("{NL}", "\n");
-        if (this.enablePrefix && key.equalsIgnoreCase("prefix") && !this.currentPrefix.equals(value)) {
-          this.currentPrefix = stringValue;
+        if (key.equalsIgnoreCase("prefix")) {
+          if (this.isBlank(stringValue)) {
+            this.enablePrefix = false;
+          } else if (!this.currentPrefix.equals(value)) {
+            this.enablePrefix = true;
+            this.currentPrefix = stringValue;
+          }
         }
 
-        this.set(key, this.enablePrefix ? stringValue.replace("{PRFX}", this.currentPrefix) : stringValue, this.getClass());
+        this.setFieldByKey(key, this.enablePrefix ? stringValue.replace("{PRFX}", this.currentPrefix) : stringValue, configFile, now);
       } else {
-        this.set(key, value, this.getClass());
+        this.setFieldByKey(key, value, configFile, now);
       }
     }
+  }
+
+  private boolean isBlank(String value) {
+    return value.trim().isEmpty();
   }
 
   /**
@@ -116,59 +153,60 @@ public class YamlConfig {
    * @param value The value.
    */
   @SuppressWarnings("unchecked")
-  private void set(String key, Object value, Class<?> root) {
+  private void setFieldByKey(String key, Object value, File configFile, String now) {
     String[] split = key.split("\\.");
-    Object instance = this.getInstance(split, root);
+    Object instance = this.getInstance(split, this.getClass());
     if (instance != null) {
       Field field = this.getField(split, instance);
       if (field != null) {
         try {
           if (field.getType() != Map.class && value instanceof Map) {
-            this.set((Map<String, Object>) value, key);
-            return;
+            this.processMap((Map<String, Object>) value, key, configFile, now);
+          } else if (field.getAnnotation(Final.class) == null) {
+            if (field.getType() == String.class && !(value instanceof String)) {
+              value = String.valueOf(value);
+            }
+
+            this.setField(field, instance, value);
           }
 
-          if (field.getAnnotation(Final.class) != null) {
-            return;
-          }
-          if (field.getType() == String.class && !(value instanceof String)) {
-            value = value.toString();
-          }
-          this.setField(field, instance, value);
           return;
         } catch (Throwable t) {
           t.printStackTrace();
         }
-      } else if (value instanceof Map) {
-        this.set((Map<String, Object>) value, key);
       }
     }
 
-    this.logger.debug("Failed to set config option: " + key + ": " + value + " | " + instance + " | " + root.getSimpleName());
+    this.logger.debug("Failed to set config option: " + key + ": " + value + " | " + instance);
+    File configFileBackup = new File(configFile.getParent(), configFile.getName() + "_backup_" + now);
+    if (!configFileBackup.exists()) {
+      try {
+        Files.copy(configFile.toPath(), configFileBackup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        this.logger.warn("Unable to load some of the config options. File was copied to {}", configFileBackup.getName());
+      } catch (Throwable t) {
+        this.logger.warn("Unable to load some of the config options and to make a copy.", t);
+      }
+    }
   }
 
   /**
    * Gets the instance for a specific config node.
    *
-   * @param split The node (split by period).
+   * @param split The node. (split by period)
    * @return The instance or null.
    */
   @Nullable
-  private Object getInstance(String[] split, Class<?> root) {
+  // TODO: Rewrite
+  private Object getInstance(String[] split, Class<?> clazz) {
     try {
-      Class<?> clazz = root == null ? MethodHandles.lookup().lookupClass() : root;
       Object instance = this;
       while (split.length > 0) {
         if (split.length == 1) {
           return instance;
         } else {
           Class<?> found = null;
-          if (clazz == null) {
-            return null;
-          }
 
-          Class<?>[] classes = clazz.getDeclaredClasses();
-          for (Class<?> current : classes) {
+          for (Class<?> current : clazz.getDeclaredClasses()) {
             if (Objects.equals(current.getSimpleName(), this.toFieldName(split[0]))) {
               found = current;
               break;
@@ -193,7 +231,7 @@ public class YamlConfig {
             split = Arrays.copyOfRange(split, 1, split.length);
             continue;
           } catch (NoSuchFieldException e) {
-            // TODO: Make backup
+            //
           }
 
           split = Arrays.copyOfRange(split, 1, split.length);
@@ -242,39 +280,41 @@ public class YamlConfig {
   @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   public void save(@NonNull File configFile) {
     try {
-      if (!configFile.exists()) {
-        File parent = configFile.getParentFile();
-        if (parent != null) {
-          configFile.getParentFile().mkdirs();
-        }
+      Path parent = configFile.toPath().getParent();
+      if (!configFile.exists() && parent != null) {
+        Files.createDirectories(parent);
 
         configFile.createNewFile();
       }
 
       PrintWriter writer = new PrintWriter(configFile, "UTF-8");
-      this.save(writer, this.getClass(), this, 0);
+      this.writeConfigKeyValue(writer, this.getClass(), this, 0);
       writer.close();
     } catch (Throwable t) {
       t.printStackTrace();
     }
   }
 
-  private void save(PrintWriter writer, Class<?> clazz, Object instance, int indent) {
+  private void writeConfigKeyValue(PrintWriter writer, Class<?> clazz, Object instance, int indent) {
     try {
       String lineSeparator = System.lineSeparator();
-      String spacing = String.join("", Collections.nCopies(indent, " "));
+      String spacing = this.getSpacing(indent);
 
       for (Field field : clazz.getFields()) {
         if (field.getAnnotation(Ignore.class) != null) {
           continue;
         }
+
         Class<?> current = field.getType();
-        if (field.getAnnotation(Ignore.class) != null) {
+        if (current.getAnnotation(Ignore.class) != null) {
           continue;
         }
 
-        if (field.getAnnotation(NewLine.class) != null) {
-          writer.write(lineSeparator);
+        NewLine newLine = field.getAnnotation(NewLine.class);
+        if (newLine != null) {
+          for (int i = 0; i < newLine.amount(); ++i) {
+            writer.write(lineSeparator);
+          }
         }
 
         Comment comment = field.getAnnotation(Comment.class);
@@ -289,8 +329,11 @@ public class YamlConfig {
           Object value = field.get(instance);
           field.setAccessible(true);
 
-          if (current.getAnnotation(NewLine.class) != null) {
-            writer.write(lineSeparator);
+          newLine = current.getAnnotation(NewLine.class);
+          if (newLine != null) {
+            for (int i = 0; i < newLine.amount(); ++i) {
+              writer.write(lineSeparator);
+            }
           }
 
           if (indent == 0) {
@@ -309,18 +352,33 @@ public class YamlConfig {
           this.writeComments(comment, writer, lineSeparator, spacing + "  ");
 
           if (value == null) {
-            this.setField(field, instance, value = current.getDeclaredConstructor().newInstance());
+            value = current.getDeclaredConstructor().newInstance();
+            this.setField(field, instance, value);
           }
 
-          this.save(writer, current, value, indent + 2);
+          this.writeConfigKeyValue(writer, current, value, indent + 2);
         } else {
-          writer.write(spacing + this.toNodeName(field.getName() + ": ") + this.toYamlString(field.get(instance), spacing, field.getName()));
+          String fieldName = field.getName();
+          String fieldValue = this.toYamlString(field.get(instance), fieldName, lineSeparator, spacing);
+          writer.write(spacing + this.toNodeName(fieldName) + (fieldValue.contains(lineSeparator) ? ":" : ": ") + fieldValue);
 
           this.writeComments(comment, writer, lineSeparator, spacing);
         }
       }
     } catch (Throwable t) {
       t.printStackTrace();
+    }
+  }
+
+  private String getSpacing(int indent) {
+    if (indent == 0) {
+      return "";
+    } else if (indent == 1) {
+      return " ";
+    } else {
+      byte[] spacing = new byte[indent];
+      Arrays.fill(spacing, (byte) 0x20); // 0x20 == ' '
+      return new String(spacing, StandardCharsets.UTF_8);
     }
   }
 
@@ -358,12 +416,12 @@ public class YamlConfig {
   /**
    * Translate a field to a config node.
    */
-  private String toNodeName(String field) {
-    return field.toLowerCase(Locale.ROOT).replace("_", "-");
+  private String toNodeName(String fieldName) {
+    return fieldName.toLowerCase(Locale.ROOT).replace("_", "-");
   }
 
   @SuppressWarnings("unchecked")
-  private String toYamlString(Object value, String spacing, String fieldName) {
+  private String toYamlString(Object value, String fieldName, String lineSeparator, String spacing) {
     if (value instanceof Map) {
       Map<String, ?> map = (Map<String, ?>) value;
       if (map.isEmpty()) {
@@ -372,18 +430,24 @@ public class YamlConfig {
 
       StringBuilder builder = new StringBuilder();
       map.forEach((key, mapValue) ->
-          builder.append(System.lineSeparator()).append(spacing).append("  ").append(key).append(": ").append(this.toYamlString(mapValue, spacing, key))
+          builder
+              .append(lineSeparator)
+              .append(spacing).append("  ")
+              .append(key).append(": ")
+              .append(this.toYamlString(mapValue, key, lineSeparator, spacing))
       );
 
       return builder.toString();
     } else if (value instanceof List) {
-      Collection<?> listValue = (Collection<?>) value;
+      List<?> listValue = (List<?>) value;
       if (listValue.isEmpty()) {
         return "[]";
       }
 
       StringBuilder builder = new StringBuilder();
-      listValue.forEach(obj -> builder.append(System.lineSeparator()).append(spacing).append("  - ").append(this.toYamlString(obj, spacing, fieldName)));
+      listValue.forEach(obj ->
+          builder.append(lineSeparator).append(spacing).append("  - ").append(this.toYamlString(obj, fieldName, lineSeparator, spacing))
+      );
 
       return builder.toString();
     } else if (value instanceof String) {
@@ -398,9 +462,16 @@ public class YamlConfig {
       } else {
         return quoted.replace(this.currentPrefix.equals(this.oldPrefix) ? this.oldPrefix : this.currentPrefix, "{PRFX}");
       }
+    } else {
+      return String.valueOf(value);
     }
+  }
 
-    return String.valueOf(value);
+  public enum LoadResult {
+
+    SUCCESS,
+    FAIL,
+    CONFIG_NOT_EXISTS
   }
 
   /**
@@ -408,7 +479,7 @@ public class YamlConfig {
    */
   @Target(ElementType.FIELD)
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Create {
+  protected @interface Create {
 
   }
 
@@ -417,7 +488,7 @@ public class YamlConfig {
    */
   @Target(ElementType.FIELD)
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Final {
+  protected @interface Final {
 
   }
 
@@ -429,8 +500,9 @@ public class YamlConfig {
       ElementType.TYPE
   })
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface NewLine {
+  protected @interface NewLine {
 
+    int amount() default 1;
   }
 
   /**
@@ -441,7 +513,7 @@ public class YamlConfig {
       ElementType.TYPE
   })
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Comment {
+  protected @interface Comment {
 
     String[] value();
 
@@ -493,7 +565,7 @@ public class YamlConfig {
       ElementType.TYPE
   })
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Ignore {
+  protected @interface Ignore {
 
   }
 }

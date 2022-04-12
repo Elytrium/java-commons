@@ -31,10 +31,10 @@ public class UpdatesChecker {
   /**
    * Checks the difference between the current version and the version from the declared url.
    *
-   * <p>If the version is a SNAPSHOT, then this version turns smaller to differ correctly (e.g. 1.0.4-SNAPSHOT = 1.0.3).
+   * <p>If the version is a SNAPSHOT, then this version turns smaller to differ correctly. (e.g. 1.0.4-SNAPSHOT = 1.0.3)
    *
-   * @param url            A URL containing the version in the text form (e.g. 1.0.1).
-   * @param currentVersion The current version string (e.g. 1.0.3-SNAPSHOT).
+   * @param url            A URL containing the version in the text form. (e.g. 1.0.1)
+   * @param currentVersion The current version string. (e.g. 1.0.3-SNAPSHOT)
    * @return True if the currentVersion is newer or equal to latest.
    */
   public static boolean checkVersionByURL(@NonNull String url, @NonNull String currentVersion) {

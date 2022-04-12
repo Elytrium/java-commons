@@ -37,7 +37,7 @@ class YamlConfigTest {
     Path configWithPrefixPath = Files.createTempFile("ConfigWithPrefix", ".yml");
     File configWithPrefixFile = this.processTempFile(configWithPrefixPath);
     for (int i = 0; i < 4; ++i) {
-      if (SettingsWithPrefix.IMP.reload(configWithPrefixFile, SettingsWithPrefix.IMP.PREFIX)) {
+      if (SettingsWithPrefix.IMP.reload(configWithPrefixFile, SettingsWithPrefix.IMP.PREFIX) == YamlConfig.LoadResult.CONFIG_NOT_EXISTS) {
         Assertions.assertEquals(0, i);
       }
     }
@@ -60,7 +60,7 @@ class YamlConfigTest {
     Path configWithoutPrefixPath = Files.createTempFile("ConfigWithoutPrefix", ".yml");
     File configWithoutPrefixFile = this.processTempFile(configWithoutPrefixPath);
     for (int i = 0; i < 4; ++i) {
-      if (SettingsWithoutPrefix.IMP.reload(configWithoutPrefixFile)) {
+      if (SettingsWithoutPrefix.IMP.reload(configWithoutPrefixFile) == YamlConfig.LoadResult.CONFIG_NOT_EXISTS) {
         Assertions.assertEquals(0, i);
       }
     }
@@ -76,6 +76,7 @@ class YamlConfigTest {
       throw new IllegalStateException("File must be deleted.");
     }
     file.deleteOnExit();
+
     return file;
   }
 
@@ -85,8 +86,8 @@ class YamlConfigTest {
         throw new IllegalStateException("Stream cannot be null.");
       } else {
         Assertions.assertEquals(
-            new String(Files.readAllBytes(currentFilePath), StandardCharsets.UTF_8),
-            new String(this.readAllBytes(finalConfig), StandardCharsets.UTF_8)
+            new String(this.readAllBytes(finalConfig), StandardCharsets.UTF_8),
+            new String(Files.readAllBytes(currentFilePath), StandardCharsets.UTF_8)
         );
       }
     }
@@ -189,7 +190,7 @@ class YamlConfigTest {
       @Create
       public SAME_LINE SAME_LINE;
 
-      @NewLine
+      @NewLine(amount = 2)
       @Comment(
           value = {
               "SAME_LINE comment Line 1",

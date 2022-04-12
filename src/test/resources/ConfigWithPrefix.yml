@@ -9,6 +9,7 @@ prepend:
 
   field-with-comment-at-same-line: "{PRFX} string value" # FIELD_WITH_COMMENT_AT_SAME_LINE comment
 
+
   same-line: # SAME_LINE comment Line 1
     append:
       field1: "{PRFX} string value"

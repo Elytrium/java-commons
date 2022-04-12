@@ -30,9 +30,8 @@ public class FileSearcher {
   /**
    * Searches for a file with the specified filename in the desired directories.
    *
-   * @param filename Filename to search for.
+   * @param filename      Filename to search for.
    * @param pathsToSearch Paths to the desired directories.
-   *
    * @return Desired file path.
    */
   @Nullable
