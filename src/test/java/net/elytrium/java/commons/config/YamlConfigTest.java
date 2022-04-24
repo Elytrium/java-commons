@@ -198,6 +198,13 @@ class YamlConfigTest {
           },
           at = Comment.At.SAME_LINE
       )
+      @Comment(
+          value = {
+              "SAME_LINE APPEND second comment Line 1",
+              "SAME_LINE APPEND second comment Line 2"
+          },
+          at = Comment.At.APPEND
+      )
       public static class SAME_LINE {
 
         @Create

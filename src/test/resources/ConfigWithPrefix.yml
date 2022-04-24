@@ -11,6 +11,8 @@ prepend:
 
 
   same-line: # SAME_LINE comment Line 1
+    # SAME_LINE APPEND second comment Line 1
+    # SAME_LINE APPEND second comment Line 2
     append:
       field1: "{PRFX} string value"
       # FIELD1 APPEND comment

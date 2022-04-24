@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -310,46 +311,27 @@ public class YamlConfig {
           continue;
         }
 
-        NewLine newLine = field.getAnnotation(NewLine.class);
-        if (newLine != null) {
-          for (int i = 0; i < newLine.amount(); ++i) {
-            writer.write(lineSeparator);
-          }
-        }
+        this.writeNewLines(field.getAnnotation(NewLine.class), writer, lineSeparator);
 
-        Comment comment = field.getAnnotation(Comment.class);
-        if (comment != null && comment.at().equals(Comment.At.PREPEND)) {
-          for (String commentLine : comment.value()) {
-            writer.write(spacing + "# " + commentLine.replace("\n", lineSeparator) + lineSeparator);
-          }
-        }
+        Comment[] comments = field.getAnnotationsByType(Comment.class);
+        this.writePrependComments(comments, writer, spacing, lineSeparator);
 
-        Create create = field.getAnnotation(Create.class);
-        if (create != null) {
-          Object value = field.get(instance);
-          field.setAccessible(true);
-
-          newLine = current.getAnnotation(NewLine.class);
-          if (newLine != null) {
-            for (int i = 0; i < newLine.amount(); ++i) {
-              writer.write(lineSeparator);
-            }
-          }
+        if (field.getAnnotation(Create.class) != null) {
+          this.writeNewLines(current.getAnnotation(NewLine.class), writer, lineSeparator);
 
           if (indent == 0) {
             writer.write(lineSeparator);
           }
 
-          comment = current.getAnnotation(Comment.class);
-          if (comment != null && comment.at().equals(Comment.At.PREPEND)) {
-            for (String commentLine : comment.value()) {
-              writer.write(spacing + "# " + commentLine + lineSeparator);
-            }
-          }
+          comments = current.getAnnotationsByType(Comment.class);
+          this.writePrependComments(comments, writer, spacing, lineSeparator);
 
           writer.write(spacing + this.toNodeName(current.getSimpleName()) + ":");
 
-          this.writeComments(comment, writer, lineSeparator, spacing + "  ");
+          this.writeComments(comments, writer, lineSeparator, spacing + "  ");
+
+          field.setAccessible(true);
+          Object value = field.get(instance);
 
           if (value == null) {
             value = current.getDeclaredConstructor().newInstance();
@@ -362,7 +344,7 @@ public class YamlConfig {
           String fieldValue = this.toYamlString(field.get(instance), fieldName, lineSeparator, spacing);
           writer.write(spacing + this.toNodeName(fieldName) + (fieldValue.contains(lineSeparator) ? ":" : ": ") + fieldValue);
 
-          this.writeComments(comment, writer, lineSeparator, spacing);
+          this.writeComments(comments, writer, lineSeparator, spacing);
         }
       }
     } catch (Throwable t) {
@@ -382,21 +364,54 @@ public class YamlConfig {
     }
   }
 
-  private void writeComments(@Nullable Comment comment, PrintWriter writer, String lineSeparator, String spacing) {
-    if (comment == null) {
+  private void writeNewLines(@Nullable NewLine newLine, PrintWriter writer, String lineSeparator) {
+    if (newLine != null) {
+      for (int i = 0; i < newLine.amount(); ++i) {
+        writer.write(lineSeparator);
+      }
+    }
+  }
+
+  private void writePrependComments(Comment[] comments, PrintWriter writer, String spacing, String lineSeparator) {
+    for (Comment comment : comments) {
+      if (comment.at().equals(Comment.At.PREPEND)) {
+        for (String commentLine : comment.value()) {
+          writer.write(spacing + "# " + commentLine.replace("\n", lineSeparator) + lineSeparator);
+        }
+      }
+    }
+  }
+
+  private void writeComments(Comment[] comments, PrintWriter writer, String lineSeparator, String spacing) {
+    int commentsAmount = comments.length;
+    if (commentsAmount == 0) {
       writer.write(lineSeparator);
     } else {
-      Comment.At at = comment.at();
-      String[] value = comment.value();
-      if (at.equals(Comment.At.PREPEND)) {
-        writer.write(lineSeparator);
-      } else if (at.equals(Comment.At.SAME_LINE)) {
-        writer.write(" # " + value[0].replace("\n", lineSeparator));
-        writer.write(lineSeparator);
-      } else if (at.equals(Comment.At.APPEND)) {
-        writer.write(lineSeparator);
-        for (String commentLine : value) {
-          writer.write(spacing + "# " + commentLine.replace("\n", lineSeparator) + lineSeparator);
+      boolean sameLineHasWritten = false;
+      boolean separatorHasWritten = false;
+      for (Comment comment : comments) {
+        Comment.At at = comment.at();
+        String[] value = comment.value();
+        if (value == null || value.length == 0 || at.equals(Comment.At.PREPEND)) {
+          if (!separatorHasWritten) {
+            writer.write(lineSeparator);
+            separatorHasWritten = true;
+          }
+        } else if (at.equals(Comment.At.SAME_LINE)) {
+          if (!sameLineHasWritten) {
+            writer.write(" # " + value[0].replace("\n", lineSeparator));
+            writer.write(lineSeparator);
+            sameLineHasWritten = true;
+            separatorHasWritten = true;
+          }
+        } else if (at.equals(Comment.At.APPEND)) {
+          if (!separatorHasWritten) {
+            writer.write(lineSeparator);
+            separatorHasWritten = true;
+          }
+          for (String commentLine : value) {
+            writer.write(spacing + "# " + commentLine.replace("\n", lineSeparator) + lineSeparator);
+          }
         }
       }
     }
@@ -506,12 +521,26 @@ public class YamlConfig {
   }
 
   /**
+   * Comments holder.
+   */
+  @Target({
+      ElementType.FIELD,
+      ElementType.TYPE
+  })
+  @Retention(RetentionPolicy.RUNTIME)
+  protected @interface CommentsHolder {
+
+    Comment[] value();
+  }
+
+  /**
    * Creates a comment.
    */
   @Target({
       ElementType.FIELD,
       ElementType.TYPE
   })
+  @Repeatable(CommentsHolder.class)
   @Retention(RetentionPolicy.RUNTIME)
   protected @interface Comment {
 
