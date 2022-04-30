@@ -22,6 +22,7 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -33,18 +34,31 @@ public class SuggestUtils {
   /**
    * Suggests online players with arguments check.
    *
+   * @param args        The current arguments.
+   * @param position    The argument position.
+   * @param suggestions The suggestions.
+   * @return The list of online players.
+   */
+  @NonNull
+  public static List<String> suggest(@NonNull String @NonNull [] args, @IntRange(from = 1) int position, @NonNull String @NonNull ... suggestions) {
+    return processArguments(args, position, Arrays.asList(suggestions));
+  }
+
+  /**
+   * Suggests online players with arguments check.
+   *
    * @param server    The proxy server.
    * @param args      The current arguments.
-   * @param offset    The argument position.
+   * @param position  The argument position.
    * @param additions The additional values.
    * @return The list of online players.
    */
   @NonNull
   public static List<String> suggestPlayers(@NonNull ProxyServer server, @NonNull String @NonNull [] args,
-      @IntRange(from = 0) int offset, @NonNull String @NonNull ... additions) {
+      @IntRange(from = 1) int position, @NonNull String @NonNull ... additions) {
     List<String> initialList = getAllPlayers(server);
     initialList.addAll(ImmutableList.copyOf(additions));
-    return checkArgs(args, offset, initialList);
+    return processArguments(args, position, initialList);
   }
 
   /**
@@ -52,16 +66,16 @@ public class SuggestUtils {
    *
    * @param server    The proxy server.
    * @param args      The current arguments.
-   * @param offset    The argument position.
+   * @param position  The argument position.
    * @param additions The additional values.
    * @return The list of registered servers.
    */
   @NonNull
   public static List<String> suggestServers(@NonNull ProxyServer server, @NonNull String @NonNull [] args,
-      @IntRange(from = 0) int offset, @NonNull String @NonNull ... additions) {
+      @IntRange(from = 1) int position, @NonNull String @NonNull ... additions) {
     List<String> initialList = getRegisteredServers(server);
     initialList.addAll(ImmutableList.copyOf(additions));
-    return checkArgs(args, offset, initialList);
+    return processArguments(args, position, initialList);
   }
 
   /**
@@ -69,17 +83,17 @@ public class SuggestUtils {
    *
    * @param server    The proxy server.
    * @param args      The current arguments.
-   * @param offset    The argument position.
+   * @param position  The argument position.
    * @param additions The additional values.
    * @return The list of online players and registered servers.
    */
   @NonNull
   public static List<String> suggestServersAndPlayers(@NonNull ProxyServer server, @NonNull String @NonNull [] args,
-      @IntRange(from = 0) int offset, @NonNull String @NonNull ... additions) {
+      @IntRange(from = 1) int position, @NonNull String @NonNull ... additions) {
     List<String> suggestions = getAllPlayers(server);
     suggestions.addAll(getRegisteredServers(server));
     suggestions.addAll(ImmutableList.copyOf(additions));
-    return checkArgs(args, offset, suggestions);
+    return processArguments(args, position, suggestions);
   }
 
   /**
@@ -110,15 +124,16 @@ public class SuggestUtils {
   }
 
   @NonNull
-  private static List<String> checkArgs(@NonNull String @NonNull [] args, int offset, @NonNull List<String> suggestions) {
-    if (args.length == offset) {
+  private static List<String> processArguments(@NonNull String @NonNull [] args, int position, @NonNull List<String> suggestions) {
+    if (args.length == 0) {
       return suggestions;
-    } else if (args.length == offset + 1) {
+    } else if (args.length == position) {
+      String argument = args[position - 1];
       return suggestions.stream()
-          .filter(str -> str.regionMatches(true, 0, args[offset], 0, args[offset].length()))
+          .filter(suggestion -> suggestion.regionMatches(true, 0, argument, 0, argument.length()))
           .collect(Collectors.toList());
+    } else {
+      return ImmutableList.of();
     }
-
-    return ImmutableList.of();
   }
 }
