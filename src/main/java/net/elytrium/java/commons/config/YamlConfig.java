@@ -458,8 +458,8 @@ public class YamlConfig {
           builder
               .append(lineSeparator)
               .append(spacing).append("  ")
-              .append(key.toString()).append(": ")
-              .append(this.toYamlString(mapValue, key.toString(), lineSeparator, spacing))
+              .append(key).append(": ")
+              .append(this.toYamlString(mapValue, String.valueOf(key), lineSeparator, spacing))
       );
 
       return builder.toString();
