@@ -36,11 +36,11 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -430,10 +430,8 @@ public class YamlConfig {
         if (((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0] != String.class) {
           throw new IllegalStateException("Key type of this map should be " + String.class);
         }
-        Map<?, ?> original = (Map<?, ?>) value;
-        Map<String, Object> correct = new HashMap<>();
-        original.forEach((k, v) -> correct.put(String.valueOf(k), v));
-        value = correct;
+        value = ((Map<?, ?>) value).entrySet().stream()
+                .collect(Collectors.toMap(e -> String.valueOf(e.getKey()), Map.Entry::getValue));
       }
       field.set(owner, value);
     }
