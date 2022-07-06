@@ -28,6 +28,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +36,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -424,6 +426,15 @@ public class YamlConfig {
     } else if (Modifier.isFinal(modifiers)) {
       throw new IllegalStateException("This field shouldn't be final.");
     } else {
+      if (field.getType() == Map.class && value instanceof Map) {
+        if (((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0] != String.class) {
+          throw new IllegalStateException("Key type of this map should be " + String.class);
+        }
+        Map<?, ?> original = (Map<?, ?>) value;
+        Map<String, Object> correct = new HashMap<>();
+        original.forEach((k, v) -> correct.put(String.valueOf(k), v));
+        value = correct;
+      }
       field.set(owner, value);
     }
   }
@@ -435,10 +446,9 @@ public class YamlConfig {
     return fieldName.toLowerCase(Locale.ROOT).replace("_", "-");
   }
 
-  @SuppressWarnings("unchecked")
   private String toYamlString(Object value, String fieldName, String lineSeparator, String spacing) {
     if (value instanceof Map) {
-      Map<String, ?> map = (Map<String, ?>) value;
+      Map<?, ?> map = (Map<?, ?>) value;
       if (map.isEmpty()) {
         return "{}";
       }
@@ -448,8 +458,8 @@ public class YamlConfig {
           builder
               .append(lineSeparator)
               .append(spacing).append("  ")
-              .append(key).append(": ")
-              .append(this.toYamlString(mapValue, key, lineSeparator, spacing))
+              .append(key.toString()).append(": ")
+              .append(this.toYamlString(mapValue, key.toString(), lineSeparator, spacing))
       );
 
       return builder.toString();
