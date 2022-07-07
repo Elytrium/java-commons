@@ -1,6 +1,9 @@
 final-field: "{PRFX} final value"
 prefix: "prefix value >>"
 regular-field: "{PRFX} regular value"
+string-with-placeholders: "This is {TEST} with {TEST2}"
+string-with-placeholders2: "This is {TEST} with {TEST2}"
+another-string-with-placeholders: "{PLACEHOLDER} {ANOTHER_PLACEHOLDER}"
 
 # PREPEND comment Line 1
 # PREPEND comment Line 2
@@ -21,3 +24,41 @@ prepend:
       # FIELD2 PREPEND comment
       # Line 2
       field2: "{PRFX} string value"
+
+node-test:
+  node-seq-map:
+    "1":
+      final-field: "{PRFX} final"
+      some-string: "{PRFX} some value"
+      some-integer: 1234
+      other-node-seq:
+        a: "{PRFX} value"
+        b: 10
+    b:
+      final-field: "{PRFX} final"
+      some-string: "2nd string"
+      some-integer: 1234
+      other-node-seq:
+        a: "{PRFX} value"
+        b: 10
+    c:
+      final-field: "{PRFX} final"
+      some-string: "3rd string"
+      some-integer: 4321
+      other-node-seq:
+        a: "{PRFX} value"
+        b: 10
+
+  node-seq-list:
+    - final-field: "{PRFX} final"
+      some-string: "{PRFX} first"
+      some-integer: 100
+      other-node-seq:
+        a: "{PRFX} value"
+        b: 10
+    - final-field: "{PRFX} final"
+      some-string: "second"
+      some-integer: 200
+      other-node-seq:
+        a: "{PRFX} value"
+        b: 10

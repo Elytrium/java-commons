@@ -1,0 +1,51 @@
+final-field: "{PRFX} final value"
+prefix: "a"
+regular-field: "{PRFX} other regular value"
+string-with-placeholders: "{TEST2} {TEST}"
+string-with-placeholders2: "{TEST2} {TEST}"
+another-string-with-placeholders: "{ANOTHER_PLACEHOLDER} {PLACEHOLDER}"
+
+# PREPEND comment Line 1
+# PREPEND comment Line 2
+prepend:
+  string-field: "{PRFX} other string value"
+
+  field-with-comment-at-same-line: "{PRFX} other value" # FIELD_WITH_COMMENT_AT_SAME_LINE comment
+
+
+  same-line: # SAME_LINE comment Line 1
+    # SAME_LINE APPEND second comment Line 1
+    # SAME_LINE APPEND second comment Line 2
+    append:
+      field1: "{PRFX} value"
+      # FIELD1 APPEND comment
+      # Visible line
+
+      # FIELD2 PREPEND comment
+      # Line 2
+      field2: "{PRFX} changed value"
+
+node-test:
+  node-seq-map:
+    "2":
+      final-field: "{PRFX} final"
+      some-string: "{PRFX} another string"
+      some-integer: 512
+      other-node-seq:
+        a: "{PRFX} another value"
+        b: 1024
+    other:
+      final-field: "{PRFX} final"
+      some-string: "string"
+      some-integer: 128
+      other-node-seq:
+        a: "{PRFX} some value"
+        b: 256
+
+  node-seq-list:
+    - final-field: "{PRFX} final"
+      some-string: "{PRFX} yet another string"
+      some-integer: 8
+      other-node-seq:
+        a: "{PRFX} yet another value"
+        b: 2
