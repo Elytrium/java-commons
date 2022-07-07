@@ -59,46 +59,35 @@ public class UpdatesChecker {
    * @return True if the currentVersion is newer or equal to latest.
    */
   public static boolean checkVersion(String latestVersion, String currentVersion) {
-    char[] latestVersionChar = latestVersion.toCharArray();
-    char[] currentVersionChar = currentVersion.toCharArray();
+    String[] latestParts = latestVersion.split("-")[0].split("\\.");
+    String[] currentParts = currentVersion.split("-")[0].split("\\.");
 
-    long padding = 1;
-    long paddingLatest = 1;
-    long paddingCurrent = 1;
-    long idLatest = 0;
-    long idCurrent = 0;
-    int indexLatest = latestVersionChar.length - 1;
-    int indexCurrent = currentVersionChar.length - 1;
+    String latest = latestVersion.replaceAll("\\D+", "");
+    String current = currentVersion.replaceAll("\\D+", "");
 
-    int snapshotIndex = currentVersion.indexOf("-");
+    StringBuilder sbLatest =
+            new StringBuilder(String.format("%0" + latest.length() + "d", Long.parseLong(latest) - (latestVersion.contains("-") ? 1 : 0)));
+    StringBuilder sbCurrent =
+            new StringBuilder(String.format("%0" + current.length() + "d", Long.parseLong(current) - (currentVersion.contains("-") ? 1 : 0)));
 
-    if (snapshotIndex != -1) {
-      indexCurrent = snapshotIndex - 1;
-      idCurrent = -1;
+    int padding = 0;
+
+    for (int i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+      String latestPart = i < latestParts.length ? latestParts[i] : "";
+      String currentPart = i < currentParts.length ? currentParts[i] : "";
+      int maxLength = Math.max(latestPart.length(), currentPart.length());
+      int toAddLatest = maxLength - latestPart.length();
+      int toAddCurrent = maxLength - currentPart.length();
+
+      sbLatest.insert(padding, new String(new char[toAddLatest]).replace('\0', '0'));
+      sbCurrent.insert(padding, new String(new char[toAddCurrent]).replace('\0', '0'));
+
+      padding += maxLength;
     }
 
-    while (indexCurrent != 0 && indexLatest != 0) {
-      if (currentVersionChar[indexCurrent] == '.' && latestVersionChar[indexLatest] == '.') {
-        --indexCurrent;
-        --indexLatest;
+    long latestId = Long.parseLong(sbLatest.toString());
+    long currentId = Long.parseLong(sbCurrent.toString());
 
-        padding = Math.max(paddingCurrent, paddingLatest) * 10;
-        paddingCurrent = 1;
-        paddingLatest = 1;
-        continue;
-      }
-
-      if (currentVersionChar[indexCurrent] != '.') {
-        idCurrent += (currentVersionChar[indexCurrent--] - '0') * paddingCurrent * padding;
-        paddingCurrent *= 10;
-      }
-
-      if (latestVersionChar[indexLatest] != '.') {
-        idLatest += (latestVersionChar[indexLatest--] - '0') * paddingLatest * padding;
-        paddingLatest *= 10;
-      }
-    }
-
-    return idLatest <= idCurrent;
+    return currentId >= latestId;
   }
 }
