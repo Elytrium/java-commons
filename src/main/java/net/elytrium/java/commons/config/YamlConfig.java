@@ -140,8 +140,10 @@ public class YamlConfig {
         String stringValue = ((String) value).replace("{NL}", "\n");
         if (usePrefix) {
           if (this.prefix != null) {
-            value = stringValue.replace("{PRFX}", this.prefix);
+            stringValue = stringValue.replace("{PRFX}", this.prefix);
           }
+
+          value = stringValue;
 
           if (key.equals("prefix")) {
             this.prefix = stringValue;
