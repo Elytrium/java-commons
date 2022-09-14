@@ -24,6 +24,19 @@ prepend:
       # FIELD2 PREPEND comment
       # Line 2
       field2: "{PRFX} string value"
+      nested-lists:
+        - - - "0"
+            - "1"
+            - "2"
+          - - "a"
+            - "b"
+            - "c"
+        - - - "3"
+            - "4"
+            - "5"
+          - - "d"
+            - "e"
+            - "f"
 
 node-test:
   node-seq-map:

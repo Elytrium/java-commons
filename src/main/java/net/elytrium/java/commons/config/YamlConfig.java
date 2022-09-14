@@ -372,15 +372,14 @@ public class YamlConfig {
               StringBuilder builder = new StringBuilder();
               String[] lines = fieldValue.split(lineSeparator);
               String[] originalLines = originalFieldValue.split(lineSeparator);
-              if (lines.length != originalLines.length) {
-                throw new IllegalStateException("Length of lines doesn't match length of original lines");
-              }
               for (int i = 0; i < lines.length; i++) {
                 String line = lines[i];
-                String originalLine = originalLines[i];
                 String toAppend = line;
-                if (line.replace("{PRFX}", this.prefix).equals(originalLine.replace("{PRFX}", this.prefix))) {
-                  toAppend = originalLine;
+                if (i < originalLines.length) {
+                  String originalLine = originalLines[i];
+                  if (line.replace("{PRFX}", this.prefix).equals(originalLine.replace("{PRFX}", this.prefix))) {
+                    toAppend = originalLine;
+                  }
                 }
                 builder.append(toAppend).append(lineSeparator);
               }
@@ -528,10 +527,10 @@ public class YamlConfig {
   }
 
   private String toYamlString(Object value, String fieldName, String lineSeparator, String spacing, boolean usePrefix) {
-    return this.toYamlString(value, fieldName, lineSeparator, spacing, false, usePrefix);
+    return this.toYamlString(value, fieldName, lineSeparator, spacing, false, 0, usePrefix);
   }
 
-  private String toYamlString(Object value, String fieldName, String lineSeparator, String spacing, boolean isMap, boolean usePrefix) {
+  private String toYamlString(Object value, String fieldName, String lineSeparator, String spacing, boolean isMap, int nested, boolean usePrefix) {
     if (value instanceof Map) {
       Map<?, ?> map = (Map<?, ?>) value;
       if (map.isEmpty()) {
@@ -541,7 +540,7 @@ public class YamlConfig {
       StringBuilder builder = new StringBuilder();
       map.forEach((key, mapValue) -> {
         String stringKey = String.valueOf(key);
-        String data = this.toYamlString(mapValue, stringKey, lineSeparator, spacing, true, usePrefix);
+        String data = this.toYamlString(mapValue, stringKey, lineSeparator, spacing, true, 0, usePrefix);
         builder.append(lineSeparator)
                .append(spacing).append("  ")
                .append(this.toNodeName(String.valueOf(key))).append(data.startsWith(lineSeparator) ? ":" : ": ")
@@ -556,10 +555,17 @@ public class YamlConfig {
       }
 
       StringBuilder builder = new StringBuilder();
-      listValue.forEach(obj ->
-          builder.append(lineSeparator).append(spacing).append("  - ")
-                  .append(this.toYamlString(obj, fieldName, lineSeparator, spacing, usePrefix))
-      );
+      boolean newLine = nested == 0;
+      for (Object obj : listValue) {
+        if (newLine) {
+          builder.append(lineSeparator).append(spacing).append(this.getSpacing(2 + nested * 2));
+        } else {
+          newLine = true;
+        }
+
+        builder.append("- ").append(
+            this.toYamlString(obj, fieldName, lineSeparator, spacing, false, nested + 1, usePrefix));
+      }
 
       return builder.toString();
     } else if (value instanceof String) {

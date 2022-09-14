@@ -63,6 +63,7 @@ class YamlConfigTest {
                 Placeholders.replace(SettingsWithPrefix.IMP.STRING_WITH_PLACEHOLDERS2, "placeholders", "string"));
         Assertions.assertEquals("value 1 value 2", Placeholders.replace(SettingsWithPrefix.IMP.ANOTHER_STRING_WITH_PLACEHOLDERS, "value 1", "value 2"));
         Assertions.assertEquals("{PLACEHOLDER} {ANOTHER_PLACEHOLDER}", SettingsWithPrefix.IMP.ANOTHER_STRING_WITH_PLACEHOLDERS);
+        Assertions.assertEquals(2, SettingsWithPrefix.IMP.PREPEND.SAME_LINE.APPEND.NESTED_LISTS.size());
 
         this.assertNodeSequence(SettingsWithPrefix.IMP.NODE_TEST.NODE_SEQ_MAP.get("1"), "prefix value >> some value", 1234, "prefix value >> value", 10);
         this.assertNodeSequence(SettingsWithPrefix.IMP.NODE_TEST.NODE_SEQ_MAP.get("b"), "2nd string", 1234, "prefix value >> value", 10);
@@ -316,6 +317,16 @@ class YamlConfigTest {
               at = Comment.At.PREPEND
           )
           public String FIELD2 = "{PRFX} string value";
+          public List<List<List<String>>> NESTED_LISTS = Arrays.asList(
+              Arrays.asList(
+                  Arrays.asList("0", "1", "2"),
+                  Arrays.asList("a", "b", "c")
+              ),
+              Arrays.asList(
+                  Arrays.asList("3", "4", "5"),
+                  Arrays.asList("d", "e", "f")
+              )
+          );
         }
       }
     }
