@@ -575,7 +575,7 @@ public class YamlConfig {
       }
 
       return ('"' + stringValue + '"').replace("\n", "{NL}");
-    } else if (value.getClass().getAnnotation(NodeSequence.class) != null) {
+    } else if (value != null && value.getClass().getAnnotation(NodeSequence.class) != null) {
       try (
               ByteArrayOutputStream baos = new ByteArrayOutputStream();
               PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8))
