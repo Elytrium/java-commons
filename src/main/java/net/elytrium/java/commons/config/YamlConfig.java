@@ -113,8 +113,11 @@ public class YamlConfig {
     now = now.substring(0, now.lastIndexOf("."));
     try (InputStream fileInputStream = Files.newInputStream(configPath)) {
       Map<String, Object> data = this.yaml.load(fileInputStream);
-      this.processMap(data, this.original, "", null, now, false);
-      this.processMap(data, this, "", configFile, now, true);
+
+      if (data != null && !data.isEmpty()) {
+        this.processMap(data, this.original, "", null, now, false);
+        this.processMap(data, this, "", configFile, now, true);
+      }
     } catch (Throwable t) {
       try {
         File configFileCopy = new File(configFile.getParent(), configFile.getName() + "_invalid_" + now);
