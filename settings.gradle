@@ -1,1 +1,1 @@
-getRootProject().setName("elytrium-java-commons")
+getRootProject().setName("java-commons")
