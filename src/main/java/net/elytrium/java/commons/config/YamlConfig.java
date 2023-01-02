@@ -442,7 +442,12 @@ public class YamlConfig {
         value = ((Map<?, ?>) value).entrySet().stream()
                 .collect(Collectors.toMap(e -> String.valueOf(e.getKey()), Map.Entry::getValue));
       } else if (field.getType().isEnum() && value instanceof String) {
-        value = Enum.valueOf((Class<? extends Enum>) field.getType(), ((String) value).toUpperCase(Locale.ROOT));
+        String stringValue = (String) value;
+        if (stringValue.isEmpty() || stringValue.equals("null")) {
+          value = null;
+        } else {
+          value = Enum.valueOf((Class<? extends Enum>) field.getType(), stringValue.toUpperCase(Locale.ROOT));
+        }
       }
       field.set(owner, value);
     }
