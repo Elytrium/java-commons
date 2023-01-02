@@ -577,7 +577,7 @@ public class YamlConfig {
         return "\"\"";
       }
 
-      return ('"' + stringValue + '"').replace("\n", "{NL}");
+      return ('"' + stringValue.replace("\"", "\\\"") + '"').replace("\n", "{NL}");
     } else if (value != null && value.getClass().getAnnotation(NodeSequence.class) != null) {
       try (
               ByteArrayOutputStream baos = new ByteArrayOutputStream();

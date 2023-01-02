@@ -50,7 +50,7 @@ class YamlConfigTest {
 
         Assertions.assertNotEquals("prefix value >> final value", SettingsWithPrefix.IMP.FINAL_FIELD); // Final fields shouldn't be changed.
         Assertions.assertEquals("prefix value >>", SettingsWithPrefix.IMP.PREFIX);
-        Assertions.assertEquals("prefix value >> regular value", SettingsWithPrefix.IMP.REGULAR_FIELD);
+        Assertions.assertEquals("prefix value >> regular \"value\"", SettingsWithPrefix.IMP.REGULAR_FIELD);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.FIELD_WITH_COMMENT_AT_SAME_LINE);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
@@ -134,7 +134,7 @@ class YamlConfigTest {
       }
     }
 
-    Assertions.assertEquals("{PRFX} regular value", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
+    Assertions.assertEquals("{PRFX} regular \"value\"", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
 
     this.compareFiles("ConfigWithoutPrefix.yml", configWithoutPrefixPath);
   }
@@ -242,7 +242,7 @@ class YamlConfigTest {
 
     public String PREFIX = "prefix value >>";
 
-    public String REGULAR_FIELD = "{PRFX} regular value";
+    public String REGULAR_FIELD = "{PRFX} regular \"value\"";
 
     @Placeholders({ "{TEST}", "test2" })
     public String STRING_WITH_PLACEHOLDERS = "This is {TEST} with {TEST2}";
@@ -383,6 +383,6 @@ class YamlConfigTest {
     @Ignore
     public static final SettingsWithoutPrefix IMP = new SettingsWithoutPrefix();
 
-    public String REGULAR_FIELD = "{PRFX} regular value";
+    public String REGULAR_FIELD = "{PRFX} regular \"value\"";
   }
 }

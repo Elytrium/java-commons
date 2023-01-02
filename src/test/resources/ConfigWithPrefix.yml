@@ -1,6 +1,6 @@
 final-field: "{PRFX} final value"
 prefix: "prefix value >>"
-regular-field: "{PRFX} regular value"
+regular-field: "{PRFX} regular \"value\""
 string-with-placeholders: "This is {TEST} with {TEST2}"
 string-with-placeholders2: "This is {TEST} with {TEST2}"
 another-string-with-placeholders: "{PLACEHOLDER} {ANOTHER_PLACEHOLDER}"
