@@ -1,1 +1,2 @@
 regular-field: "{PRFX} regular \"value\""
+enum-field: ENUM_VALUE_3

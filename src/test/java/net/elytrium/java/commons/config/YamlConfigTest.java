@@ -51,6 +51,7 @@ class YamlConfigTest {
         Assertions.assertNotEquals("prefix value >> final value", SettingsWithPrefix.IMP.FINAL_FIELD); // Final fields shouldn't be changed.
         Assertions.assertEquals("prefix value >>", SettingsWithPrefix.IMP.PREFIX);
         Assertions.assertEquals("prefix value >> regular \"value\"", SettingsWithPrefix.IMP.REGULAR_FIELD);
+        Assertions.assertEquals(RegularEnum.ENUM_VALUE_2, SettingsWithPrefix.IMP.ENUM_FIELD);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.FIELD_WITH_COMMENT_AT_SAME_LINE);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
@@ -82,6 +83,7 @@ class YamlConfigTest {
         Assertions.assertNotEquals("a final value", SettingsWithPrefix.IMP.FINAL_FIELD);
         Assertions.assertEquals("a", SettingsWithPrefix.IMP.PREFIX);
         Assertions.assertEquals("a other regular value", SettingsWithPrefix.IMP.REGULAR_FIELD);
+        Assertions.assertEquals(RegularEnum.ENUM_VALUE_2, SettingsWithPrefix.IMP.ENUM_FIELD);
         Assertions.assertEquals("a other string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
         Assertions.assertEquals("a other value", SettingsWithPrefix.IMP.PREPEND.FIELD_WITH_COMMENT_AT_SAME_LINE);
         Assertions.assertEquals("a value", SettingsWithPrefix.IMP.PREPEND.SAME_LINE.APPEND.FIELD1);
@@ -90,8 +92,8 @@ class YamlConfigTest {
         Assertions.assertEquals("value 2 value 1", Placeholders.replace(SettingsWithPrefix.IMP.ANOTHER_STRING_WITH_PLACEHOLDERS, "value 1", "value 2"));
         Assertions.assertEquals("{ANOTHER_PLACEHOLDER} {PLACEHOLDER}", SettingsWithPrefix.IMP.ANOTHER_STRING_WITH_PLACEHOLDERS);
 
-        System.out.println(System.identityHashCode(SettingsWithPrefix.IMP.STRING_WITH_PLACEHOLDERS)
-                + " " + System.identityHashCode(SettingsWithPrefix.IMP.STRING_WITH_PLACEHOLDERS2));
+        Assertions.assertNotEquals(System.identityHashCode(SettingsWithPrefix.IMP.STRING_WITH_PLACEHOLDERS),
+            System.identityHashCode(SettingsWithPrefix.IMP.STRING_WITH_PLACEHOLDERS2));
 
         Assertions.assertNotNull(SettingsWithPrefix.IMP.NODE_TEST.NODE_SEQ_MAP);
         Assertions.assertEquals(2, SettingsWithPrefix.IMP.NODE_TEST.NODE_SEQ_MAP.size());
@@ -135,6 +137,7 @@ class YamlConfigTest {
     }
 
     Assertions.assertEquals("{PRFX} regular \"value\"", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
+    Assertions.assertEquals(RegularEnum.ENUM_VALUE_3, SettingsWithoutPrefix.IMP.ENUM_FIELD);
 
     this.compareFiles("ConfigWithoutPrefix.yml", configWithoutPrefixPath);
   }
@@ -243,6 +246,8 @@ class YamlConfigTest {
     public String PREFIX = "prefix value >>";
 
     public String REGULAR_FIELD = "{PRFX} regular \"value\"";
+
+    public RegularEnum ENUM_FIELD = RegularEnum.ENUM_VALUE_2;
 
     @Placeholders({ "{TEST}", "test2" })
     public String STRING_WITH_PLACEHOLDERS = "This is {TEST} with {TEST2}";
@@ -384,5 +389,14 @@ class YamlConfigTest {
     public static final SettingsWithoutPrefix IMP = new SettingsWithoutPrefix();
 
     public String REGULAR_FIELD = "{PRFX} regular \"value\"";
+
+    public RegularEnum ENUM_FIELD = RegularEnum.ENUM_VALUE_3;
+  }
+
+  private enum RegularEnum {
+
+    ENUM_VALUE_1,
+    ENUM_VALUE_2,
+    ENUM_VALUE_3,
   }
 }

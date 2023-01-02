@@ -213,7 +213,7 @@ public class YamlConfig {
 
           return;
         } catch (Throwable t) {
-          t.printStackTrace();
+          throw new ConfigLoadException(t);
         }
       }
     }
@@ -305,7 +305,7 @@ public class YamlConfig {
       this.writeConfigKeyValue(writer, this.getClass(), this, this.original, 0, true);
       writer.close();
     } catch (Throwable t) {
-      t.printStackTrace();
+      throw new ConfigSaveException(t);
     }
   }
 
@@ -397,7 +397,7 @@ public class YamlConfig {
         }
       }
     } catch (Throwable t) {
-      t.printStackTrace();
+      throw new ConfigSaveException(t);
     }
   }
 
@@ -427,6 +427,7 @@ public class YamlConfig {
             .forEach(commentLine -> writer.write(spacing + "# " + commentLine.replace("\n", lineSeparator) + lineSeparator));
   }
 
+  @SuppressWarnings("unchecked")
   private void setField(Field field, Object owner, Object value) throws IllegalAccessException {
     int modifiers = field.getModifiers();
     if (Modifier.isStatic(modifiers)) {
@@ -440,6 +441,8 @@ public class YamlConfig {
         }
         value = ((Map<?, ?>) value).entrySet().stream()
                 .collect(Collectors.toMap(e -> String.valueOf(e.getKey()), Map.Entry::getValue));
+      } else if (field.getType().isEnum() && value instanceof String) {
+        value = Enum.valueOf((Class<? extends Enum>) field.getType(), ((String) value).toUpperCase(Locale.ROOT));
       }
       field.set(owner, value);
     }
