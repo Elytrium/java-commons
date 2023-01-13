@@ -1,0 +1,9 @@
+//file:noinspection GroovyAssignabilityCheck
+
+dependencies {
+    compileOnly("org.slf4j:slf4j-api:$slf4jVersion")
+    compileOnly("org.yaml:snakeyaml:$snakeYamlVersion")
+
+    testImplementation("org.yaml:snakeyaml:$snakeYamlVersion")
+    testImplementation("org.slf4j:slf4j-api:$slf4jVersion")
+}

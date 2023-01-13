@@ -1,1 +1,3 @@
 getRootProject().setName("java-commons")
+
+include("config", "kyori", "velocity", "utils")
