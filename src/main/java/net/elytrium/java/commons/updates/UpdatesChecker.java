@@ -25,7 +25,6 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-// TODO: Tests
 public class UpdatesChecker {
 
   /**

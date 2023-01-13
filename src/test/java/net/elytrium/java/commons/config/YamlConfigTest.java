@@ -23,8 +23,10 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -138,8 +140,31 @@ class YamlConfigTest {
 
     Assertions.assertEquals("{PRFX} regular \"value\"", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
     Assertions.assertEquals(RegularEnum.ENUM_VALUE_3, SettingsWithoutPrefix.IMP.ENUM_FIELD);
+    Assertions.assertEquals(new Date(123456789L), SettingsWithoutPrefix.IMP.DATE_FIELD);
+    Assertions.assertEquals(Paths.get("test.3gp"), SettingsWithoutPrefix.IMP.PATH_FIELD);
+
+    RegularEnum testEnumField = RegularEnum.ENUM_VALUE_1;
+    Date testDateField = new Date(223456789L);
+    Path testPathField = Paths.get("test2.3gp");
+
+    SettingsWithoutPrefix.IMP.ENUM_FIELD = testEnumField;
+    SettingsWithoutPrefix.IMP.DATE_FIELD = testDateField;
+    SettingsWithoutPrefix.IMP.PATH_FIELD = testPathField;
+
+    SettingsWithoutPrefix.IMP.save(configWithoutPrefixFile);
+    SettingsWithoutPrefix.IMP.dispose();
+
+    SettingsWithoutPrefix newSettings = new SettingsWithoutPrefix();
+    newSettings.registerSerializer(new PathSerializer());
+
+    YamlConfig.LoadResult result = newSettings.load(configWithoutPrefixFile);
+    Assertions.assertEquals(YamlConfig.LoadResult.SUCCESS, result);
 
     this.compareFiles("ConfigWithoutPrefix.yml", configWithoutPrefixPath);
+
+    Assertions.assertEquals(testEnumField, newSettings.ENUM_FIELD);
+    Assertions.assertEquals(testDateField, newSettings.DATE_FIELD);
+    Assertions.assertEquals(testPathField, newSettings.PATH_FIELD);
   }
 
   private void assertNodeSequence(SettingsWithPrefix.NODE_TEST.TestNodeSequence node, String expectedString, int expectedInteger, String a, int b) {
@@ -391,6 +416,48 @@ class YamlConfigTest {
     public String REGULAR_FIELD = "{PRFX} regular \"value\"";
 
     public RegularEnum ENUM_FIELD = RegularEnum.ENUM_VALUE_3;
+
+    @CustomSerializer(
+        serializerClass = DateSerializer.class
+    )
+    public Date DATE_FIELD = new Date(123456789L);
+
+    public Path PATH_FIELD = Paths.get("test.3gp");
+
+  }
+
+  static class DateSerializer extends ConfigSerializer<Date, Long> {
+
+    public DateSerializer() {
+      super(Date.class, Long.class);
+    }
+
+    @Override
+    public Date deserialize(Long from) {
+      return new Date(from / 10L);
+    }
+
+    @Override
+    public Long serialize(Date from) {
+      return from.getTime() * 10L;
+    }
+  }
+
+  static class PathSerializer extends ConfigSerializer<Path, String> {
+
+    public PathSerializer() {
+      super(Path.class, String.class);
+    }
+
+    @Override
+    public Path deserialize(String from) {
+      return Paths.get(from);
+    }
+
+    @Override
+    public String serialize(Path from) {
+      return from.toString();
+    }
   }
 
   private enum RegularEnum {
