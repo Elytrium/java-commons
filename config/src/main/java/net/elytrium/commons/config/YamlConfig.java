@@ -363,7 +363,7 @@ public class YamlConfig {
       String spacing = this.getSpacing(indent);
 
       for (Field field : clazz.getFields()) {
-        if (field.getAnnotation(Ignore.class) != null) {
+        if (field.getAnnotation(Ignore.class) != null || Modifier.isTransient(field.getModifiers())) {
           continue;
         }
 
@@ -576,7 +576,8 @@ public class YamlConfig {
       for (Field field : fields) {
         if (field.getAnnotation(Final.class) != null
             || field.getAnnotation(Ignore.class) != null
-            || field.getType().getAnnotation(Ignore.class) != null) {
+            || field.getType().getAnnotation(Ignore.class) != null
+            || Modifier.isTransient(field.getModifiers())) {
           continue;
         }
         int modifiers = field.getModifiers();

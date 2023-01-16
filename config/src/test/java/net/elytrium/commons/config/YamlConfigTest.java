@@ -389,8 +389,7 @@ class YamlConfigTest {
         @Final
         public String FINAL_FIELD = "{PRFX} final";
 
-        @Ignore
-        public int IGNORED = 0;
+        public transient int IGNORED = 0;
 
         public String SOME_STRING = "{PRFX} some value";
 
