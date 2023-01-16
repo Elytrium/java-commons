@@ -384,7 +384,6 @@ class YamlConfigTest {
         this.NODE_SEQ_LIST.add(createNodeSequence(TestNodeSequence.class, "second", 200));
       }
 
-      @NodeSequence
       public static class TestNodeSequence {
 
         @Final

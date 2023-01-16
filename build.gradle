@@ -16,7 +16,7 @@ allprojects {
     apply(plugin: "org.cadixdev.licenser")
 
     setGroup("net.elytrium.commons")
-    setVersion("1.2.0")
+    setVersion("1.2.1-SNAPSHOT")
 
     compileJava {
         getOptions().setEncoding("UTF-8")

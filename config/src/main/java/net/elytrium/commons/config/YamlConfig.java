@@ -225,7 +225,7 @@ public class YamlConfig {
                 Type parameterType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[1];
                 if (parameterType instanceof Class<?>) {
                   Class<?> parameter = (Class<?>) parameterType;
-                  if (parameter.getAnnotation(NodeSequence.class) != null) {
+                  if (this.isNodeMapping(parameter)) {
                     value = ((Map<String, ?>) value).entrySet().stream()
                         .collect(Collectors.toMap(Map.Entry::getKey,
                             e -> this.createNodeSequence(parameter, (Map<String, Object>) e.getValue(), usePrefix)));
@@ -235,7 +235,7 @@ public class YamlConfig {
                 Type parameterType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
                 if (parameterType instanceof Class<?>) {
                   Class<?> parameter = (Class<?>) parameterType;
-                  if (parameter.getAnnotation(NodeSequence.class) != null) {
+                  if (this.isNodeMapping(parameter)) {
                     value = ((List<?>) value).stream()
                         .map(obj -> this.createNodeSequence(parameter, (Map<String, Object>) obj, usePrefix))
                         .collect(Collectors.toList());
@@ -326,6 +326,12 @@ public class YamlConfig {
    */
   private String toFieldName(String node) {
     return node.toUpperCase(Locale.ROOT).replaceAll("-", "_");
+  }
+
+  private boolean isNodeMapping(Class<?> cls) {
+    return cls.getAnnotation(NodeSequence.class) != null
+        || (!cls.isPrimitive() && !cls.isEnum() && !Number.class.isAssignableFrom(cls)
+        && !Map.class.isAssignableFrom(cls) && !List.class.isAssignableFrom(cls));
   }
 
   public void save(@NonNull File configFile) {
@@ -530,13 +536,10 @@ public class YamlConfig {
   /**
    * Creates a new node sequence instance with unchanged fields.
    *
-   * @param nodeSequenceClass Class with {@link NodeSequence} annotation.
+   * @param nodeSequenceClass Node class.
    */
   protected static <T> T createNodeSequence(Class<T> nodeSequenceClass) {
     try {
-      if (nodeSequenceClass.getAnnotation(NodeSequence.class) == null) {
-        throw new IllegalStateException(nodeSequenceClass.getName() + " is not a node class");
-      }
       Constructor<T> constructor = nodeSequenceClass.getDeclaredConstructor();
       constructor.setAccessible(true);
       return constructor.newInstance();
@@ -550,8 +553,8 @@ public class YamlConfig {
   /**
    * Creates a new node sequence instance with specified field values.
    *
-   * @param nodeSequenceClass Class with {@link NodeSequence} annotation.
-   * @param objects           Values
+   * @param nodeSequenceClass Node class.
+   * @param objects           Values.
    */
   private <T> T createNodeSequence(Class<T> nodeSequenceClass, Map<String, Object> objects, boolean usePrefix) {
     T instance = createNodeSequence(nodeSequenceClass);
@@ -562,7 +565,7 @@ public class YamlConfig {
   /**
    * Creates a new node sequence instance with specified field values.
    *
-   * @param nodeSequenceClass Class with {@link NodeSequence} annotation.
+   * @param nodeSequenceClass Node class.
    * @param values            The values to be set for the fields, not including fields with {@link Final} and {@link Ignore} annotations.
    */
   protected static <T> T createNodeSequence(Class<T> nodeSequenceClass, Object... values) {
@@ -613,10 +616,11 @@ public class YamlConfig {
 
   private String toYamlString(Field field, Object value, String lineSeparator, String spacing, boolean usePrefix)
       throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-    return this.toYamlString(field, value, lineSeparator, spacing, false, 0, usePrefix);
+    return this.toYamlString(field, value, lineSeparator, spacing, false, false, 0, usePrefix);
   }
 
-  private String toYamlString(Field field, Object value, String lineSeparator, String spacing, boolean isMap, int nested, boolean usePrefix)
+  private String toYamlString(Field field, Object value, String lineSeparator,
+      String spacing, boolean isCollection, boolean isMap, int nested, boolean usePrefix)
       throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
     CustomSerializer customSerializer = field.getAnnotation(CustomSerializer.class);
     if (customSerializer != null) {
@@ -638,7 +642,7 @@ public class YamlConfig {
       for (Map.Entry<?, ?> entry : map.entrySet()) {
         Object key = entry.getKey();
         Object mapValue = entry.getValue();
-        String data = this.toYamlString(field, mapValue, lineSeparator, spacing, true, 0, usePrefix);
+        String data = this.toYamlString(field, mapValue, lineSeparator, spacing, true, true, 0, usePrefix);
         builder.append(lineSeparator)
             .append(spacing).append("  ")
             .append(this.toNodeName(String.valueOf(key))).append(data.startsWith(lineSeparator) ? ":" : ": ")
@@ -662,7 +666,7 @@ public class YamlConfig {
         }
 
         builder.append("- ").append(
-            this.toYamlString(field, obj, lineSeparator, spacing, false, nested + 1, usePrefix));
+            this.toYamlString(field, obj, lineSeparator, spacing, true, false, nested + 1, usePrefix));
       }
 
       return builder.toString();
@@ -673,7 +677,7 @@ public class YamlConfig {
       }
 
       return ('"' + stringValue.replace("\"", "\\\"") + '"').replace("\n", "{NL}");
-    } else if (value != null && value.getClass().getAnnotation(NodeSequence.class) != null) {
+    } else if (value != null && isCollection && this.isNodeMapping(value.getClass())) {
       try (
           StringWriter stringWriter = new StringWriter();
           PrintWriter writer = new PrintWriter(stringWriter)
@@ -832,6 +836,7 @@ public class YamlConfig {
   /**
    * Indicates that a class is a node sequence.
    */
+  @Deprecated
   @Target(ElementType.TYPE)
   @Retention(RetentionPolicy.RUNTIME)
   protected @interface NodeSequence {
