@@ -44,7 +44,9 @@ public class UpdatesChecker {
       connection.setReadTimeout(timeout);
       return checkVersion(new Scanner(connection.getInputStream(), "UTF-8").nextLine().trim(), currentVersion);
     } catch (IOException e) {
-      throw new UncheckedIOException("Unable to check for updates.", e);
+      // throw new UncheckedIOException("Unable to check for updates.", e);
+      // Do not throw an exception directly without catching it, OK?
+      return true;
     }
   }
 
