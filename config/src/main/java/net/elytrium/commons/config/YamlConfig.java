@@ -677,7 +677,7 @@ public class YamlConfig {
         return "\"\"";
       }
 
-      return ('"' + stringValue.replace("\"", "\\\"") + '"').replace("\n", "{NL}");
+      return ('"' + stringValue.replace("\\", "\\\\").replace("\"", "\\\"") + '"').replace("\n", "{NL}");
     } else if (value != null && isCollection && this.isNodeMapping(value.getClass())) {
       try (
           StringWriter stringWriter = new StringWriter();
