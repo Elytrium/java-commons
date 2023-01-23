@@ -331,7 +331,8 @@ public class YamlConfig {
   private boolean isNodeMapping(Class<?> cls) {
     return cls.getAnnotation(NodeSequence.class) != null
         || (!cls.isPrimitive() && !cls.isEnum() && !Number.class.isAssignableFrom(cls)
-        && !Map.class.isAssignableFrom(cls) && !List.class.isAssignableFrom(cls));
+        && !Map.class.isAssignableFrom(cls) && !List.class.isAssignableFrom(cls)
+        && !String.class.isAssignableFrom(cls));
   }
 
   public void save(@NonNull File configFile) {
