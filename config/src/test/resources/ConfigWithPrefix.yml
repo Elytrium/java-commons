@@ -1,7 +1,7 @@
 final-field: "{PRFX} final value"
 prefix: "prefix value >>"
 regular-field: "{PRFX} regular \"value\""
-enum-field: ENUM_VALUE_2
+enum-field: TRUE
 string-with-placeholders: "This is {TEST} with {TEST2}"
 string-with-placeholders2: "This is {TEST} with {TEST2}"
 another-string-with-placeholders: "{PLACEHOLDER} {ANOTHER_PLACEHOLDER}"

@@ -53,7 +53,7 @@ class YamlConfigTest {
         Assertions.assertNotEquals("prefix value >> final value", SettingsWithPrefix.IMP.FINAL_FIELD); // Final fields shouldn't be changed.
         Assertions.assertEquals("prefix value >>", SettingsWithPrefix.IMP.PREFIX);
         Assertions.assertEquals("prefix value >> regular \"value\"", SettingsWithPrefix.IMP.REGULAR_FIELD);
-        Assertions.assertEquals(RegularEnum.ENUM_VALUE_2, SettingsWithPrefix.IMP.ENUM_FIELD);
+        Assertions.assertEquals(RegularEnum.TRUE, SettingsWithPrefix.IMP.ENUM_FIELD);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.FIELD_WITH_COMMENT_AT_SAME_LINE);
         Assertions.assertEquals("prefix value >> string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
@@ -85,7 +85,7 @@ class YamlConfigTest {
         Assertions.assertNotEquals("a final value", SettingsWithPrefix.IMP.FINAL_FIELD);
         Assertions.assertEquals("a", SettingsWithPrefix.IMP.PREFIX);
         Assertions.assertEquals("a other regular value", SettingsWithPrefix.IMP.REGULAR_FIELD);
-        Assertions.assertEquals(RegularEnum.ENUM_VALUE_2, SettingsWithPrefix.IMP.ENUM_FIELD);
+        Assertions.assertEquals(RegularEnum.TRUE, SettingsWithPrefix.IMP.ENUM_FIELD);
         Assertions.assertEquals("a other string value", SettingsWithPrefix.IMP.PREPEND.STRING_FIELD);
         Assertions.assertEquals("a other value", SettingsWithPrefix.IMP.PREPEND.FIELD_WITH_COMMENT_AT_SAME_LINE);
         Assertions.assertEquals("a value", SettingsWithPrefix.IMP.PREPEND.SAME_LINE.APPEND.FIELD1);
@@ -139,7 +139,7 @@ class YamlConfigTest {
     }
 
     Assertions.assertEquals("{PRFX} regular \"value\"", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
-    Assertions.assertEquals(RegularEnum.ENUM_VALUE_3, SettingsWithoutPrefix.IMP.ENUM_FIELD);
+    Assertions.assertEquals(RegularEnum.FALSE, SettingsWithoutPrefix.IMP.ENUM_FIELD);
     Assertions.assertEquals(new Date(123456789L), SettingsWithoutPrefix.IMP.DATE_FIELD);
     Assertions.assertEquals(Paths.get("test.3gp"), SettingsWithoutPrefix.IMP.PATH_FIELD);
 
@@ -272,7 +272,7 @@ class YamlConfigTest {
 
     public String REGULAR_FIELD = "{PRFX} regular \"value\"";
 
-    public RegularEnum ENUM_FIELD = RegularEnum.ENUM_VALUE_2;
+    public RegularEnum ENUM_FIELD = RegularEnum.TRUE;
 
     @Placeholders({ "{TEST}", "test2" })
     public String STRING_WITH_PLACEHOLDERS = "This is {TEST} with {TEST2}";
@@ -413,7 +413,7 @@ class YamlConfigTest {
 
     public String REGULAR_FIELD = "{PRFX} regular \"value\"";
 
-    public RegularEnum ENUM_FIELD = RegularEnum.ENUM_VALUE_3;
+    public RegularEnum ENUM_FIELD = RegularEnum.FALSE;
 
     @CustomSerializer(
         serializerClass = DateSerializer.class
@@ -461,7 +461,7 @@ class YamlConfigTest {
   private enum RegularEnum {
 
     ENUM_VALUE_1,
-    ENUM_VALUE_2,
-    ENUM_VALUE_3,
+    TRUE,
+    FALSE,
   }
 }

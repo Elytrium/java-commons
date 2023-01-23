@@ -509,8 +509,8 @@ public class YamlConfig {
         }
         value = ((Map<?, ?>) value).entrySet().stream()
             .collect(Collectors.toMap(e -> String.valueOf(e.getKey()), Map.Entry::getValue));
-      } else if (field.getType().isEnum() && value instanceof String) {
-        String stringValue = (String) value;
+      } else if (field.getType().isEnum()) {
+        String stringValue = String.valueOf(value);
         if (stringValue.isEmpty() || stringValue.equals("null")) {
           value = null;
         } else {
