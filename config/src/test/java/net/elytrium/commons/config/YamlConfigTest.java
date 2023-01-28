@@ -422,6 +422,8 @@ class YamlConfigTest {
 
     public Path PATH_FIELD = Paths.get("test.3gp");
 
+    public List<Object> TEST_LIST = Arrays.asList("test", 123);
+
   }
 
   static class DateSerializer extends ConfigSerializer<Date, Long> {

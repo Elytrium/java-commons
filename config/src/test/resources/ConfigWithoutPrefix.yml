@@ -2,3 +2,6 @@ regular-field: "{PRFX} regular \"value\""
 enum-field: ENUM_VALUE_1
 date-field: 2234567890
 path-field: test2.3gp
+test-list:
+  - "test"
+  - 123

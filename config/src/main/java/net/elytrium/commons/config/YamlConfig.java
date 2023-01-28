@@ -228,7 +228,7 @@ public class YamlConfig {
                   if (this.isNodeMapping(parameter)) {
                     value = ((Map<String, ?>) value).entrySet().stream()
                         .collect(Collectors.toMap(Map.Entry::getKey,
-                            e -> this.createNodeSequence(parameter, (Map<String, Object>) e.getValue(), usePrefix)));
+                            e -> this.createNodeSequence(parameter, e.getValue(), usePrefix)));
                   }
                 }
               } else if (field.getType() == List.class && value instanceof List) {
@@ -237,7 +237,7 @@ public class YamlConfig {
                   Class<?> parameter = (Class<?>) parameterType;
                   if (this.isNodeMapping(parameter)) {
                     value = ((List<?>) value).stream()
-                        .map(obj -> this.createNodeSequence(parameter, (Map<String, Object>) obj, usePrefix))
+                        .map(obj -> this.createNodeSequence(parameter, obj, usePrefix))
                         .collect(Collectors.toList());
                   }
                 }
@@ -557,9 +557,14 @@ public class YamlConfig {
    * @param nodeSequenceClass Node class.
    * @param objects           Values.
    */
-  private <T> T createNodeSequence(Class<T> nodeSequenceClass, Map<String, Object> objects, boolean usePrefix) {
+  @SuppressWarnings("unchecked")
+  private <T> T createNodeSequence(Class<T> nodeSequenceClass, Object objects, boolean usePrefix) {
+    if (!(objects instanceof Map)) {
+      return (T) objects;
+    }
+
     T instance = createNodeSequence(nodeSequenceClass);
-    this.processMap(objects, instance, "", null, null, usePrefix);
+    this.processMap((Map<String, Object>) objects, instance, "", null, null, usePrefix);
     return instance;
   }
 
