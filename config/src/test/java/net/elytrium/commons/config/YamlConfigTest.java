@@ -132,27 +132,32 @@ class YamlConfigTest {
   void testConfigWithoutPrefix() throws IOException {
     Path configWithoutPrefixPath = Files.createTempFile("ConfigWithoutPrefix", ".yml");
     File configWithoutPrefixFile = this.processTempFile(configWithoutPrefixPath);
+    SettingsWithoutPrefix settingsWithoutPrefix = new SettingsWithoutPrefix();
     for (int i = 0; i < 4; ++i) {
-      if (SettingsWithoutPrefix.IMP.reload(configWithoutPrefixFile) == YamlConfig.LoadResult.CONFIG_NOT_EXISTS) {
+      if (settingsWithoutPrefix.reload(configWithoutPrefixFile) == YamlConfig.LoadResult.CONFIG_NOT_EXISTS) {
         Assertions.assertEquals(0, i);
       }
     }
 
-    Assertions.assertEquals("{PRFX} regular \"value\"", SettingsWithoutPrefix.IMP.REGULAR_FIELD);
-    Assertions.assertEquals(RegularEnum.FALSE, SettingsWithoutPrefix.IMP.ENUM_FIELD);
-    Assertions.assertEquals(new Date(123456789L), SettingsWithoutPrefix.IMP.DATE_FIELD);
-    Assertions.assertEquals(Paths.get("test.3gp"), SettingsWithoutPrefix.IMP.PATH_FIELD);
+    Assertions.assertEquals("{PRFX} regular \"value\"", settingsWithoutPrefix.regularField);
+    Assertions.assertEquals(RegularEnum.FALSE, settingsWithoutPrefix.enumField);
+    Assertions.assertEquals(new Date(123456789L), settingsWithoutPrefix.dateField);
+    Assertions.assertEquals(Paths.get("test.3gp"), settingsWithoutPrefix.pathField);
+    Assertions.assertEquals(2, settingsWithoutPrefix.listField.size());
+    Assertions.assertEquals("test", settingsWithoutPrefix.listField.get(0));
+    Assertions.assertEquals(123, settingsWithoutPrefix.listField.get(1));
+    Assertions.assertEquals("test", settingsWithoutPrefix.numeric1234Field);
 
     RegularEnum testEnumField = RegularEnum.ENUM_VALUE_1;
     Date testDateField = new Date(223456789L);
     Path testPathField = Paths.get("test2.3gp");
 
-    SettingsWithoutPrefix.IMP.ENUM_FIELD = testEnumField;
-    SettingsWithoutPrefix.IMP.DATE_FIELD = testDateField;
-    SettingsWithoutPrefix.IMP.PATH_FIELD = testPathField;
+    settingsWithoutPrefix.enumField = testEnumField;
+    settingsWithoutPrefix.dateField = testDateField;
+    settingsWithoutPrefix.pathField = testPathField;
 
-    SettingsWithoutPrefix.IMP.save(configWithoutPrefixFile);
-    SettingsWithoutPrefix.IMP.dispose();
+    settingsWithoutPrefix.save(configWithoutPrefixFile);
+    settingsWithoutPrefix.dispose();
 
     SettingsWithoutPrefix newSettings = new SettingsWithoutPrefix();
     newSettings.registerSerializer(new PathSerializer());
@@ -162,9 +167,9 @@ class YamlConfigTest {
 
     this.compareFiles("ConfigWithoutPrefix.yml", configWithoutPrefixPath);
 
-    Assertions.assertEquals(testEnumField, newSettings.ENUM_FIELD);
-    Assertions.assertEquals(testDateField, newSettings.DATE_FIELD);
-    Assertions.assertEquals(testPathField, newSettings.PATH_FIELD);
+    Assertions.assertEquals(testEnumField, newSettings.enumField);
+    Assertions.assertEquals(testDateField, newSettings.dateField);
+    Assertions.assertEquals(testPathField, newSettings.pathField);
   }
 
   private void assertNodeSequence(SettingsWithPrefix.NODE_TEST.TestNodeSequence node, String expectedString, int expectedInteger, String a, int b) {
@@ -407,22 +412,25 @@ class YamlConfigTest {
   }
 
   static class SettingsWithoutPrefix extends YamlConfig {
+    
+    public SettingsWithoutPrefix() {
+      super(FieldNameStyle.CAMEL_CASE, FieldNameStyle.SNAKE_CASE);
+    }
 
-    @Ignore
-    public static final SettingsWithoutPrefix IMP = new SettingsWithoutPrefix();
+    public String regularField = "{PRFX} regular \"value\"";
 
-    public String REGULAR_FIELD = "{PRFX} regular \"value\"";
-
-    public RegularEnum ENUM_FIELD = RegularEnum.FALSE;
+    public RegularEnum enumField = RegularEnum.FALSE;
 
     @CustomSerializer(
         serializerClass = DateSerializer.class
     )
-    public Date DATE_FIELD = new Date(123456789L);
+    public Date dateField = new Date(123456789L);
 
-    public Path PATH_FIELD = Paths.get("test.3gp");
+    public Path pathField = Paths.get("test.3gp");
 
-    public List<Object> TEST_LIST = Arrays.asList("test", 123);
+    public List<Object> listField = Arrays.asList("test", 123);
+
+    public String numeric1234Field = "test";
 
   }
 

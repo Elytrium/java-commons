@@ -50,6 +50,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,8 +64,20 @@ public class YamlConfig {
   private final List<Integer> placeholders = new LinkedList<>();
   private final Map<Class<? extends ConfigSerializer<?, ?>>, ConfigSerializer<?, ?>> cachedSerializers = new HashMap<>();
   private final Map<Class<?>, ConfigSerializer<?, ?>> registeredSerializers = new HashMap<>();
+  private final FieldNameStyle classFieldNameStyle;
+  private final FieldNameStyle nodeFieldNameStyle;
 
   private Logger logger = LoggerFactory.getLogger(YamlConfig.class);
+
+  public YamlConfig() {
+    this.classFieldNameStyle = FieldNameStyle.MACRO_CASE;
+    this.nodeFieldNameStyle = FieldNameStyle.KEBAB_CASE;
+  }
+
+  public YamlConfig(FieldNameStyle classFieldNameStyle, FieldNameStyle nodeFieldNameStyle) {
+    this.classFieldNameStyle = classFieldNameStyle;
+    this.nodeFieldNameStyle = nodeFieldNameStyle;
+  }
 
   public void setLogger(Logger logger) {
     this.logger = logger;
@@ -159,12 +172,10 @@ public class YamlConfig {
         Path configFileCopy = parent.resolve(newFileName);
         Files.copy(configFile, configFileCopy, StandardCopyOption.REPLACE_EXISTING);
 
-        this.logger.warn("Unable to load config. File was copied to {}", newFileName, t);
-      } catch (Exception e) {
-        this.logger.warn("Unable to load config and to make a copy.", e);
+        throw new ConfigLoadException("Unable to load config. File was copied to " + newFileName, t);
+      } catch (IOException e) {
+        throw new ConfigLoadException("Unable to load config and to make a copy.", e);
       }
-
-      return LoadResult.FAIL;
     }
 
     return LoadResult.SUCCESS;
@@ -246,28 +257,24 @@ public class YamlConfig {
 
             this.setField(field, instance, value);
           }
-
-          return;
         } catch (Throwable t) {
-          throw new ConfigLoadException(t);
-        }
-      }
-    }
+          this.logger.debug("Failed to set config option: " + key + ": " + value + " | " + instance);
+          if (configFile != null) {
+            Path parent = configFile.getParent();
+            if (parent == null) {
+              throw new NullPointerException("Config parent path is null for " + configFile);
+            }
 
-    this.logger.debug("Failed to set config option: " + key + ": " + value + " | " + instance);
-    if (configFile != null) {
-      Path parent = configFile.getParent();
-      if (parent == null) {
-        throw new NullPointerException("Config parent path is null for " + configFile);
-      }
-
-      Path configFileBackup = parent.resolve(configFile.getFileName() + "_backup_" + now);
-      if (!Files.exists(configFileBackup)) {
-        try {
-          Files.copy(configFile, configFileBackup, StandardCopyOption.REPLACE_EXISTING);
-          this.logger.warn("Unable to load some of the config options. File was copied to {}", configFileBackup.getFileName());
-        } catch (Throwable t) {
-          this.logger.warn("Unable to load some of the config options and to make a copy.", t);
+            Path configFileBackup = parent.resolve(configFile.getFileName() + "_backup_" + now);
+            if (!Files.exists(configFileBackup)) {
+              try {
+                Files.copy(configFile, configFileBackup, StandardCopyOption.REPLACE_EXISTING);
+                this.logger.warn("Unable to load some of the config options. File was copied to {}", configFileBackup.getFileName());
+              } catch (Throwable t2) {
+                this.logger.warn("Unable to load some of the config options and to make a copy.", t2);
+              }
+            }
+          }
         }
       }
     }
@@ -282,7 +289,7 @@ public class YamlConfig {
   private Object getInstance(@NonNull Object instance, String[] split) {
     try {
       for (int i = 0; i < split.length - 1; i++) {
-        String name = this.toFieldName(split[i]);
+        String name = this.toClassFieldName(split[i]);
         Field field = instance.getClass().getDeclaredField(name);
         field.setAccessible(true);
         Object value = field.get(instance);
@@ -312,20 +319,13 @@ public class YamlConfig {
   @Nullable
   private Field getField(String[] split, Object instance) {
     try {
-      Field field = instance.getClass().getField(this.toFieldName(split[split.length - 1]));
+      Field field = instance.getClass().getField(this.toClassFieldName(split[split.length - 1]));
       field.setAccessible(true);
       return field;
     } catch (Throwable t) {
-      this.logger.debug("Invalid config field: " + String.join(".", split) + " for " + this.toNodeName(instance.getClass().getSimpleName()));
+      this.logger.debug("Invalid config field: " + String.join(".", split) + " for " + instance.getClass().getSimpleName());
       return null;
     }
-  }
-
-  /**
-   * Converts the field name to the config node format.
-   */
-  private String toFieldName(String node) {
-    return node.toUpperCase(Locale.ROOT).replaceAll("-", "_");
   }
 
   private boolean isNodeMapping(Class<?> cls) {
@@ -358,100 +358,97 @@ public class YamlConfig {
     }
   }
 
-  private void writeConfigKeyValue(PrintWriter writer, Class<?> clazz, Object instance, Object original, int indent, boolean usePrefix) {
-    try {
-      String lineSeparator = System.lineSeparator();
-      String spacing = this.getSpacing(indent);
+  private void writeConfigKeyValue(PrintWriter writer, Class<?> clazz, Object instance, Object original, int indent, boolean usePrefix)
+      throws IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException {
+    String lineSeparator = System.lineSeparator();
+    String spacing = this.getSpacing(indent);
 
-      for (Field field : clazz.getFields()) {
-        if (field.getAnnotation(Ignore.class) != null || Modifier.isTransient(field.getModifiers())) {
-          continue;
+    for (Field field : clazz.getFields()) {
+      if (field.getAnnotation(Ignore.class) != null || Modifier.isTransient(field.getModifiers())) {
+        continue;
+      }
+
+      Class<?> current = field.getType();
+      if (current.getAnnotation(Ignore.class) != null) {
+        continue;
+      }
+
+      this.writeNewLines(field.getAnnotation(NewLine.class), writer, lineSeparator);
+
+      Comment[] comments = field.getAnnotationsByType(Comment.class);
+      this.writePrependComments(comments, writer, spacing, lineSeparator);
+
+      if (field.getAnnotation(Create.class) != null) {
+        this.writeNewLines(current.getAnnotation(NewLine.class), writer, lineSeparator);
+
+        if (indent == 0) {
+          writer.write(lineSeparator);
         }
 
-        Class<?> current = field.getType();
-        if (current.getAnnotation(Ignore.class) != null) {
-          continue;
-        }
-
-        this.writeNewLines(field.getAnnotation(NewLine.class), writer, lineSeparator);
-
-        Comment[] comments = field.getAnnotationsByType(Comment.class);
+        comments = current.getAnnotationsByType(Comment.class);
         this.writePrependComments(comments, writer, spacing, lineSeparator);
 
-        if (field.getAnnotation(Create.class) != null) {
-          this.writeNewLines(current.getAnnotation(NewLine.class), writer, lineSeparator);
+        writer.write(spacing);
+        writer.write(this.toNodeFieldName(current.getSimpleName()));
+        writer.write(':');
 
-          if (indent == 0) {
-            writer.write(lineSeparator);
-          }
+        this.writeComments(comments, writer, lineSeparator, spacing + "  ");
 
-          comments = current.getAnnotationsByType(Comment.class);
-          this.writePrependComments(comments, writer, spacing, lineSeparator);
+        field.setAccessible(true);
+        Object value = field.get(instance);
 
-          writer.write(spacing);
-          writer.write(this.toNodeName(current.getSimpleName()));
-          writer.write(':');
-
-          this.writeComments(comments, writer, lineSeparator, spacing + "  ");
-
-          field.setAccessible(true);
-          Object value = field.get(instance);
-
-          if (value == null) {
-            value = current.getDeclaredConstructor().newInstance();
-            this.setField(field, instance, value);
-          }
-
-          Object originalValue = field.get(original);
-
-          if (originalValue == null) {
-            originalValue = current.getDeclaredConstructor().newInstance();
-            this.setField(field, original, originalValue);
-          }
-
-          this.writeConfigKeyValue(writer, current, value, originalValue, indent + 2, usePrefix);
-        } else {
-          String fieldName = field.getName();
-
-          String fieldValue = this.toYamlString(field, field.get(instance), lineSeparator, spacing, usePrefix);
-          String originalFieldValue = this.toYamlString(field, field.get(original), lineSeparator, spacing, usePrefix);
-          String valueToWrite = fieldValue;
-
-          if (this.prefix != null) {
-            if (fieldValue.startsWith("\"") && fieldValue.endsWith("\"")) { // String
-              if (fieldValue.replace("{PRFX}", this.prefix).equals(originalFieldValue.replace("{PRFX}", this.prefix))) {
-                valueToWrite = originalFieldValue;
-              }
-            } else if (fieldValue.contains(lineSeparator)) { // Map/List
-              StringBuilder builder = new StringBuilder();
-              String[] lines = fieldValue.split(lineSeparator);
-              String[] originalLines = originalFieldValue.split(lineSeparator);
-              for (int i = 0; i < lines.length; i++) {
-                String line = lines[i];
-                String toAppend = line;
-                if (i < originalLines.length) {
-                  String originalLine = originalLines[i];
-                  if (line.replace("{PRFX}", this.prefix).equals(originalLine.replace("{PRFX}", this.prefix))) {
-                    toAppend = originalLine;
-                  }
-                }
-                builder.append(toAppend).append(lineSeparator);
-              }
-              builder.setLength(builder.length() - lineSeparator.length());
-              valueToWrite = builder.toString();
-            }
-          }
-
-          writer.write(spacing);
-          writer.write(this.toNodeName(fieldName));
-          writer.write((valueToWrite.contains(lineSeparator) ? ":" : ": "));
-          writer.write(valueToWrite);
-
-          this.writeComments(comments, writer, lineSeparator, spacing);
+        if (value == null) {
+          value = current.getDeclaredConstructor().newInstance();
+          this.setField(field, instance, value);
         }
+
+        Object originalValue = field.get(original);
+
+        if (originalValue == null) {
+          originalValue = current.getDeclaredConstructor().newInstance();
+          this.setField(field, original, originalValue);
+        }
+
+        this.writeConfigKeyValue(writer, current, value, originalValue, indent + 2, usePrefix);
+      } else {
+        String fieldName = field.getName();
+
+        String fieldValue = this.toYamlString(field, field.get(instance), lineSeparator, spacing, usePrefix);
+        String originalFieldValue = this.toYamlString(field, field.get(original), lineSeparator, spacing, usePrefix);
+        String valueToWrite = fieldValue;
+
+        if (this.prefix != null) {
+          if (fieldValue.startsWith("\"") && fieldValue.endsWith("\"")) { // String
+            if (fieldValue.replace("{PRFX}", this.prefix).equals(originalFieldValue.replace("{PRFX}", this.prefix))) {
+              valueToWrite = originalFieldValue;
+            }
+          } else if (fieldValue.contains(lineSeparator)) { // Map/List
+            StringBuilder builder = new StringBuilder();
+            String[] lines = fieldValue.split(lineSeparator);
+            String[] originalLines = originalFieldValue.split(lineSeparator);
+            for (int i = 0; i < lines.length; i++) {
+              String line = lines[i];
+              String toAppend = line;
+              if (i < originalLines.length) {
+                String originalLine = originalLines[i];
+                if (line.replace("{PRFX}", this.prefix).equals(originalLine.replace("{PRFX}", this.prefix))) {
+                  toAppend = originalLine;
+                }
+              }
+              builder.append(toAppend).append(lineSeparator);
+            }
+            builder.setLength(builder.length() - lineSeparator.length());
+            valueToWrite = builder.toString();
+          }
+        }
+
+        writer.write(spacing);
+        writer.write(this.toNodeFieldName(fieldName));
+        writer.write((valueToWrite.contains(lineSeparator) ? ":" : ": "));
+        writer.write(valueToWrite);
+
+        this.writeComments(comments, writer, lineSeparator, spacing);
       }
-    } catch (Throwable t) {
-      throw new ConfigSaveException(t);
     }
   }
 
@@ -612,13 +609,21 @@ public class YamlConfig {
   }
 
   /**
-   * Translate a field to a config node.
+   * Converts the class field name to the config node field format.
    */
-  private String toNodeName(String fieldName) {
-    if (fieldName.matches("^\\d+$")) {
-      return '"' + fieldName + '"';
+  private String toNodeFieldName(String field) {
+    if (field.matches("^\\d+")) {
+      return this.toNodeFieldName('"' + field + '"');
     }
-    return fieldName.toLowerCase(Locale.ROOT).replace("_", "-");
+
+    return this.nodeFieldNameStyle.fromMacroCase(this.classFieldNameStyle.toMacroCase(field));
+  }
+
+  /**
+   * Converts the config node field to the class field name format.
+   */
+  private String toClassFieldName(String field) {
+    return this.classFieldNameStyle.fromMacroCase(this.nodeFieldNameStyle.toMacroCase(field));
   }
 
   private String toYamlString(Field field, Object value, String lineSeparator, String spacing, boolean usePrefix)
@@ -627,7 +632,7 @@ public class YamlConfig {
   }
 
   private String toYamlString(Field field, Object value, String lineSeparator,
-      String spacing, boolean isCollection, boolean isMap, int nested, boolean usePrefix)
+                              String spacing, boolean isCollection, boolean isMap, int nested, boolean usePrefix)
       throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
     CustomSerializer customSerializer = field.getAnnotation(CustomSerializer.class);
     if (customSerializer != null) {
@@ -652,7 +657,7 @@ public class YamlConfig {
         String data = this.toYamlString(field, mapValue, lineSeparator, spacing, true, true, 0, usePrefix);
         builder.append(lineSeparator)
             .append(spacing).append("  ")
-            .append(this.toNodeName(String.valueOf(key))).append(data.startsWith(lineSeparator) ? ":" : ": ")
+            .append(this.toNodeFieldName(String.valueOf(key))).append(data.startsWith(lineSeparator) ? ":" : ": ")
             .append(data);
       }
 
@@ -876,4 +881,84 @@ public class YamlConfig {
 
   }
 
+  /**
+   * kebab-case
+   * camelCase
+   * CapitalCamelCase
+   * snake_case
+   * MACRO_CASE
+   * COBOL-CASE
+   */
+  protected enum FieldNameStyle {
+
+    /**
+     * kebab-case
+     */
+    KEBAB_CASE(s -> s.replace("_", "-").toLowerCase(Locale.ROOT), s -> s.replace("-", "_").toUpperCase(Locale.ROOT)),
+    /**
+     * camelCase
+     */
+    CAMEL_CASE(s -> toCamelCase(s, false), s -> {
+      StringBuilder sb = new StringBuilder();
+      char previous = 0;
+      for (char c : s.toCharArray()) {
+        if ((Character.isUpperCase(c) && Character.isLowerCase(previous))
+            || (Character.isAlphabetic(c) && Character.isDigit(previous))
+            || (Character.isDigit(c) && Character.isAlphabetic(previous))) {
+          sb.append('_');
+        }
+
+        sb.append(Character.toUpperCase(c));
+        previous = c;
+      }
+
+      return sb.toString();
+    }),
+    /**
+     * CapitalCamelCase
+     */
+    CAPITAL_CAMEL_CASE(s -> toCamelCase(s, true), CAMEL_CASE.toMacroCase),
+    /**
+     * snake_case
+     */
+    SNAKE_CASE(s -> s.toLowerCase(Locale.ROOT), s -> s.toUpperCase(Locale.ROOT)),
+    /**
+     * MACRO_CASE
+     */
+    MACRO_CASE(s -> s, s -> s),
+    /**
+     * COBOL-CASE
+     */
+    COBOL_CASE(s -> s.replace("_", "-"), s -> s.replace("-", "_"));
+
+    private final Function<String, String> fromMacroCase;
+    private final Function<String, String> toMacroCase;
+
+    FieldNameStyle(Function<String, String> fromMacroCase, Function<String, String> toMacroCase) {
+      this.fromMacroCase = fromMacroCase;
+      this.toMacroCase = toMacroCase;
+    }
+
+    private String fromMacroCase(String fieldName) {
+      return this.fromMacroCase.apply(fieldName);
+    }
+
+    private String toMacroCase(String fieldName) {
+      return this.toMacroCase.apply(fieldName);
+    }
+
+    private static String toCamelCase(String s, boolean nextCharUppercase) {
+      StringBuilder sb = new StringBuilder();
+      for (char c : s.toCharArray()) {
+        if (c == '_') {
+          nextCharUppercase = true;
+        } else {
+          sb.append(nextCharUppercase ? c : Character.toLowerCase(c));
+          nextCharUppercase = false;
+        }
+      }
+
+      return sb.toString();
+    }
+  }
 }

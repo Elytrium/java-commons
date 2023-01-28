@@ -1,7 +1,8 @@
-regular-field: "{PRFX} regular \"value\""
-enum-field: ENUM_VALUE_1
-date-field: 2234567890
-path-field: test2.3gp
-test-list:
+regular_field: "{PRFX} regular \"value\""
+enum_field: ENUM_VALUE_1
+date_field: 2234567890
+path_field: test2.3gp
+list_field:
   - "test"
   - 123
+numeric_1234_field: "test"
