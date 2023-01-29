@@ -147,6 +147,7 @@ class YamlConfigTest {
     Assertions.assertEquals("test", settingsWithoutPrefix.listField.get(0));
     Assertions.assertEquals(123, settingsWithoutPrefix.listField.get(1));
     Assertions.assertEquals("test", settingsWithoutPrefix.numeric1234Field);
+    Assertions.assertEquals(0, settingsWithoutPrefix.changedNameField.test);
 
     RegularEnum testEnumField = RegularEnum.ENUM_VALUE_1;
     Date testDateField = new Date(223456789L);
