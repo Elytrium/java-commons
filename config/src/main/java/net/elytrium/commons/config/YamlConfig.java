@@ -389,7 +389,7 @@ public class YamlConfig {
         this.writePrependComments(comments, writer, spacing, lineSeparator);
 
         writer.write(spacing);
-        writer.write(this.toNodeFieldName(current.getSimpleName()));
+        writer.write(this.toNodeFieldName(field.getName()));
         writer.write(':');
 
         this.writeComments(comments, writer, lineSeparator, spacing + "  ");
