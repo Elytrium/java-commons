@@ -6,3 +6,6 @@ list_field:
   - "test"
   - 123
 numeric_1234_field: "test"
+
+changed_name_field:
+  test: 0

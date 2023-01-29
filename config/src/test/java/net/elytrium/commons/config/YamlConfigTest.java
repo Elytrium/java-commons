@@ -432,6 +432,13 @@ class YamlConfigTest {
 
     public String numeric1234Field = "test";
 
+    @Create
+    public ChangedNameClass changedNameField;
+
+    static class ChangedNameClass {
+
+      public int test;
+    }
   }
 
   static class DateSerializer extends ConfigSerializer<Date, Long> {
