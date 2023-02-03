@@ -6,6 +6,14 @@ list_field:
   - "test"
   - 123
 numeric_1234_field: "test"
-
 changed_name_field:
   test: 0
+test_class:
+  nested-class-name: "sample-name"
+  field-y: 0
+  field-z: 0
+  field-x: 0
+created_test_class:
+  strings_list:
+    - "test-1"
+    - "test-2"

@@ -5,7 +5,6 @@ enum-field: TRUE
 string-with-placeholders: "{TEST2} {TEST}"
 string-with-placeholders2: "{TEST2} {TEST}"
 another-string-with-placeholders: "{ANOTHER_PLACEHOLDER} {PLACEHOLDER}"
-
 # PREPEND comment Line 1
 # PREPEND comment Line 2
 prepend:
@@ -38,7 +37,6 @@ prepend:
           - - "d"
             - "e"
             - "f"
-
 node-test:
   node-seq-map:
     "2":

@@ -381,10 +381,6 @@ public class YamlConfig {
       if (field.getAnnotation(Create.class) != null) {
         this.writeNewLines(current.getAnnotation(NewLine.class), writer, lineSeparator);
 
-        if (indent == 0) {
-          writer.write(lineSeparator);
-        }
-
         comments = current.getAnnotationsByType(Comment.class);
         this.writePrependComments(comments, writer, spacing, lineSeparator);
 
@@ -634,14 +630,17 @@ public class YamlConfig {
   private String toYamlString(Field field, Object value, String lineSeparator,
                               String spacing, boolean isCollection, boolean isMap, int nested, boolean usePrefix)
       throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-    CustomSerializer customSerializer = field.getAnnotation(CustomSerializer.class);
-    if (customSerializer != null) {
-      value = this.getAndCacheSerializer(customSerializer).serializeRaw(value);
-    }
+    if (field != null) {
+      CustomSerializer customSerializer = field.getAnnotation(CustomSerializer.class);
 
-    ConfigSerializer<?, ?> configSerializer = this.registeredSerializers.get(field.getType());
-    if (configSerializer != null) {
-      value = configSerializer.serializeRaw(value);
+      if (customSerializer != null) {
+        value = this.getAndCacheSerializer(customSerializer).serializeRaw(value);
+      }
+
+      ConfigSerializer<?, ?> configSerializer = this.registeredSerializers.get(field.getType());
+      if (configSerializer != null) {
+        value = configSerializer.serializeRaw(value);
+      }
     }
 
     if (value instanceof Map) {
@@ -654,7 +653,7 @@ public class YamlConfig {
       for (Map.Entry<?, ?> entry : map.entrySet()) {
         Object key = entry.getKey();
         Object mapValue = entry.getValue();
-        String data = this.toYamlString(field, mapValue, lineSeparator, spacing, true, true, 0, usePrefix);
+        String data = this.toYamlString(null, mapValue, lineSeparator, spacing, true, true, 0, usePrefix);
         builder.append(lineSeparator)
             .append(spacing).append("  ")
             .append(this.toNodeFieldName(String.valueOf(key))).append(data.startsWith(lineSeparator) ? ":" : ": ")

@@ -148,6 +148,11 @@ class YamlConfigTest {
     Assertions.assertEquals(123, settingsWithoutPrefix.listField.get(1));
     Assertions.assertEquals("test", settingsWithoutPrefix.numeric1234Field);
     Assertions.assertEquals(0, settingsWithoutPrefix.changedNameField.test);
+    Assertions.assertEquals(2, settingsWithoutPrefix.createdTestClass.stringsList.size());
+    Assertions.assertEquals(0, settingsWithoutPrefix.testClass.x);
+    Assertions.assertEquals(0, settingsWithoutPrefix.testClass.y);
+    Assertions.assertEquals(0, settingsWithoutPrefix.testClass.z);
+    Assertions.assertEquals("sample-name", settingsWithoutPrefix.testClass.nestedClass.name);
 
     RegularEnum testEnumField = RegularEnum.ENUM_VALUE_1;
     Date testDateField = new Date(223456789L);
@@ -439,6 +444,75 @@ class YamlConfigTest {
     static class ChangedNameClass {
 
       public int test;
+    }
+
+    @CustomSerializer(serializerClass = ExternalClassSerializer.class)
+    public ExternalDeserializedClass testClass = new ExternalDeserializedClass();
+
+    @Create
+    public CreatedTestClass createdTestClass;
+  }
+
+  static class CreatedTestClass {
+    public List<String> stringsList = Arrays.asList("test-1", "test-2");
+  }
+
+  static class ExternalDeserializedClass {
+
+    public int x;
+    public int y;
+    public int z;
+    public ExternalNestedClass nestedClass;
+
+    public ExternalDeserializedClass() {
+      this.x = 0;
+      this.y = 0;
+      this.z = 0;
+      this.nestedClass = new ExternalNestedClass("sample-name");
+    }
+
+    public ExternalDeserializedClass(int x, int y, int z, String name) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      this.nestedClass = new ExternalNestedClass(name);
+    }
+
+    static class ExternalNestedClass {
+
+      private String name;
+
+      public ExternalNestedClass() {
+
+      }
+
+      public ExternalNestedClass(String name) {
+        this.name = name;
+      }
+    }
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  static class ExternalClassSerializer extends ConfigSerializer<ExternalDeserializedClass, Map> {
+
+    protected ExternalClassSerializer() {
+      super(ExternalDeserializedClass.class, Map.class);
+    }
+
+    @Override
+    public Map serialize(ExternalDeserializedClass from) {
+      Map map = new HashMap();
+      map.put("field-x", from.x);
+      map.put("field-y", from.y);
+      map.put("field-z", from.z);
+      map.put("nested-class-name", from.nestedClass.name);
+      return map;
+    }
+
+    @Override
+    public ExternalDeserializedClass deserialize(Map from) {
+      return new ExternalDeserializedClass((int) from.get("field-x"),
+          (int) from.get("field-y"), (int) from.get("field-z"), (String) from.get("nested-class-name"));
     }
   }
 
