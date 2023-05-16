@@ -165,7 +165,7 @@ public class YamlConfig {
       try {
         Path parent = configFile.getParent();
         if (parent == null) {
-          throw new NullPointerException("Config parent path is null for " + configFile);
+          parent = new File("").toPath();
         }
 
         String newFileName = configFile.getFileName() + "_invalid_" + now;
@@ -262,7 +262,7 @@ public class YamlConfig {
           if (configFile != null) {
             Path parent = configFile.getParent();
             if (parent == null) {
-              throw new NullPointerException("Config parent path is null for " + configFile);
+              parent = new File("").toPath();
             }
 
             Path configFileBackup = parent.resolve(configFile.getFileName() + "_backup_" + now);
